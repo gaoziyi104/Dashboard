@@ -1076,9 +1076,7 @@ async function loadUSNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`
   ).join('\n\n');
   const txt = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
-    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
-    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"分类词","source":"媒体名"}\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   const result = extractJSONArray(txt);
   if (!result?.length) throw new Error('Gemini 返回格式异常');
@@ -1094,7 +1092,7 @@ async function loadCNNews() {
   ps('cn', 'loading', '中国新闻 · 混元搜索中');
   if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
   const txt = await hunyuanFetch([{ role: 'user', content:
-    `今天是${new Date().toLocaleDateString('zh-CN')}。请搜索今日中国最重要的10条新闻热点，来源优先选择新华社、人民日报、央视新闻。标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"分类词","source":"媒体名"}`  }]);
+    `今天是${new Date().toLocaleDateString('zh-CN')}。搜索今日中国最重要的10条新闻（不足则全部），来源优先选择新华社、人民日报、央视新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词，source字段填媒体名。`  }]);
   const result = extractJSONArray(txt);
   if (!result?.length) throw new Error('混元返回格式异常');
   ps('cn', 'ok', `中国新闻 · ${result.length} 条`);
@@ -1129,9 +1127,7 @@ async function loadEnergyNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const txt = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文能源新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
-    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
-    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"能源","source":"媒体名"}\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   const result = extractJSONArray(txt);
   if (!result?.length) throw new Error('Gemini 返回格式异常');
@@ -1171,9 +1167,7 @@ async function loadAINews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const txt = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文AI/科技新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
-    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
-    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"AI","source":"媒体名"}\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   const result = extractJSONArray(txt);
   if (!result?.length) throw new Error('Gemini 返回格式异常');
