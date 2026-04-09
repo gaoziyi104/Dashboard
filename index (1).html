@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SIGNAL · 多源情报看板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ─────────────────────────────────────────────────
+   RESET
+───────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+
+/* ─────────────────────────────────────────────────
+   TOKENS
+───────────────────────────────────────────────── */
+:root{
+  --void:   #060605;
+  --ink:    #0d0d0b;
+  --paper:  #131310;
+  --smoke:  #1e1e1a;
+  --ash:    #2e2e28;
+  --mist:   #72726a;
+  --cloud:  #a8a89e;
+  --snow:   #eeece4;
+  --us:     #e8392a;
+  --cn:     #e89a20;
+  --eai:    #00c896;
+  --wb:     #ff5c35;
+  --xhs:    #f72b5a;
+  --mkt:    #3d84f5;
+  --health: #9b72f0;
+  --up:     #00c896;
+  --dn:     #e8392a;
+  --fd: 'Bebas Neue','Arial Narrow',sans-serif;
+  --fu: 'Syne','PingFang SC',system-ui,sans-serif;
+  --fb: 'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --fm: 'Courier New',ui-monospace,monospace;
+  --r: 2px;
+  --gap: 1px;      /* grid-line gap */
+  --pad: 28px;     /* outer horizontal padding */
+  --pad-sm: 16px;
+}
+
+/* ─────────────────────────────────────────────────
+   BASE
+───────────────────────────────────────────────── */
+body{
+  background:var(--void);color:var(--snow);
+  font-family:var(--fb);font-size:13px;
+  min-height:100vh;overflow-x:hidden;line-height:1.5;
+}
+a{color:inherit;text-decoration:none;}
+a:hover{opacity:.8;}
+
+/* ─────────────────────────────────────────────────
+   TOPBAR
+───────────────────────────────────────────────── */
+.topbar{
+  position:sticky;top:0;z-index:60;
+  background:var(--void);border-bottom:1px solid var(--ash);
+  display:flex;align-items:stretch;height:52px;
+}
+.tb-inner{
+  width:100%;max-width:1520px;margin:0 auto;
+  padding:0 var(--pad);
+  display:flex;align-items:center;gap:0;
+  overflow:hidden;
+}
+/* brand */
+.tb-brand{
+  display:flex;align-items:center;gap:9px;
+  padding-right:20px;border-right:1px solid var(--ash);
+  flex-shrink:0;height:100%;
+}
+.tb-logo{font-family:var(--fd);font-size:26px;letter-spacing:5px;color:var(--snow);line-height:1;}
+.tb-sub{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--mist);}
+/* clock */
+.tb-clock{
+  display:flex;align-items:center;gap:8px;
+  padding:0 18px;border-right:1px solid var(--ash);flex-shrink:0;
+}
+.tb-time{font-family:var(--fd);font-size:18px;letter-spacing:2px;color:var(--snow);min-width:78px;}
+.tb-date{font-family:var(--fu);font-size:8px;font-weight:600;color:var(--mist);letter-spacing:1px;line-height:1.5;}
+/* countdown */
+.tb-cd{
+  display:flex;flex-direction:column;justify-content:center;gap:1px;
+  padding:0 18px;border-right:1px solid var(--ash);flex-shrink:0;
+}
+.tb-cd-lbl{font-family:var(--fu);font-size:7px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--mist);}
+.tb-cd-val{font-family:var(--fd);font-size:15px;letter-spacing:2px;color:var(--eai);transition:color .3s;}
+.tb-cd-val.warn{color:var(--dn);}
+/* status */
+.tb-status{display:flex;align-items:center;gap:6px;padding:0 18px;min-width:0;overflow:hidden;}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--eai);flex-shrink:0;animation:blink 2s infinite;}
+.tb-dot.warn{background:var(--cn);animation:none;}
+.tb-dot.err{background:var(--us);animation:none;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.tb-status-txt{font-family:var(--fu);font-size:9px;font-weight:600;letter-spacing:1px;color:var(--cloud);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+/* actions */
+.tb-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;}
+.btn{
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:6px 12px;cursor:pointer;border-radius:var(--r);
+  border:1px solid var(--ash);background:transparent;
+  color:var(--mist);transition:all .15s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--cloud);color:var(--snow);}
+.btn:disabled{opacity:.35;cursor:not-allowed;}
+.btn.primary{background:var(--snow);border-color:var(--snow);color:var(--void);}
+.btn.primary:hover{background:var(--cloud);border-color:var(--cloud);}
+
+/* ─────────────────────────────────────────────────
+   TICKER
+───────────────────────────────────────────────── */
+.ticker{
+  border-bottom:1px solid var(--ash);background:var(--ink);
+  height:28px;overflow:hidden;position:relative;
+}
+.ticker-badge{
+  position:absolute;left:0;top:0;bottom:0;z-index:2;
+  display:flex;align-items:center;padding:0 12px;
+  background:var(--mkt);
+  font-family:var(--fd);font-size:10px;letter-spacing:2px;color:var(--void);
+  white-space:nowrap;
+}
+.ticker-scroll{
+  display:flex;align-items:center;height:100%;
+  white-space:nowrap;width:max-content;padding-left:75px;
+  animation:marquee 32s linear infinite;
+}
+.ticker-scroll:hover{animation-play-state:paused;}
+@keyframes marquee{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.ti{display:inline-flex;align-items:center;gap:6px;padding:0 18px;border-right:1px solid var(--ash);height:100%;}
+.ti-sym{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:2px;color:var(--mist);}
+.ti-val{font-family:var(--fd);font-size:13px;letter-spacing:1px;color:var(--snow);}
+.ti-chg{font-family:var(--fu);font-size:9px;font-weight:700;}
+.ti-chg.up{color:var(--up);}
+.ti-chg.dn{color:var(--dn);}
+
+/* ─────────────────────────────────────────────────
+   META BAR
+───────────────────────────────────────────────── */
+.meta-bar{
+  border-bottom:1px solid var(--ash);background:var(--ink);
+  height:32px;display:flex;align-items:center;gap:0;
+  overflow:hidden;
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+}
+.mb-seg{
+  display:flex;align-items:center;gap:7px;
+  padding:0 16px;border-right:1px solid var(--ash);
+  height:100%;white-space:nowrap;flex-shrink:0;
+}
+.mb-lbl{color:var(--mist);}
+.mb-val{font-family:var(--fm);font-size:10px;color:var(--mkt);text-transform:none;letter-spacing:0;max-width:280px;overflow:hidden;text-overflow:ellipsis;}
+.mb-api-text{font-family:var(--fu);font-size:8px;color:var(--cloud);}
+.mb-pill{
+  margin-left:auto;margin-right:14px;flex-shrink:0;
+  background:var(--smoke);border:1px solid var(--ash);
+  padding:2px 8px;border-radius:var(--r);
+  color:var(--mist);font-size:8px;
+}
+
+/* ─────────────────────────────────────────────────
+   PIPELINE BAR
+───────────────────────────────────────────────── */
+.pipeline-bar{
+  border-bottom:1px solid var(--ash);background:var(--void);
+  display:flex;align-items:stretch;height:26px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.pipeline-bar::-webkit-scrollbar{display:none;}
+.ps{
+  display:flex;align-items:center;gap:5px;
+  padding:0 14px;border-right:1px solid var(--ash);
+  white-space:nowrap;flex-shrink:0;
+  font-family:var(--fu);font-size:7px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--ash);
+  transition:color .2s;
+}
+.ps-dot{width:4px;height:4px;border-radius:50%;background:var(--ash);flex-shrink:0;transition:background .2s;}
+.ps.loading{color:var(--cn);}
+.ps.loading .ps-dot{background:var(--cn);animation:blink 1s infinite;}
+.ps.ok{color:var(--eai);}
+.ps.ok .ps-dot{background:var(--eai);}
+.ps.err{color:var(--us);}
+.ps.err .ps-dot{background:var(--us);animation:none;}
+.ps.skip{color:var(--mist);}
+.ps.skip .ps-dot{background:var(--mist);}
+
+/* ─────────────────────────────────────────────────
+   CONTENT WRAP
+───────────────────────────────────────────────── */
+.wrap{width:100%;max-width:1520px;margin:0 auto;padding:0 var(--pad);}
+.content{padding-bottom:64px;}
+
+/* ─────────────────────────────────────────────────
+   SECTION HEADER
+───────────────────────────────────────────────── */
+.sec-hd{
+  padding:28px 0 14px;
+  display:flex;align-items:flex-end;gap:14px;
+}
+.sec-num{
+  font-family:var(--fd);font-size:72px;line-height:.82;
+  letter-spacing:-3px;color:var(--ash);user-select:none;flex-shrink:0;
+}
+.sec-info{display:flex;flex-direction:column;gap:3px;padding-bottom:5px;flex:1;}
+.sec-eye{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:4px;text-transform:uppercase;}
+.sec-title{font-family:var(--fu);font-size:18px;font-weight:800;color:var(--snow);letter-spacing:-.2px;}
+.sec-cnt{font-family:var(--fd);font-size:20px;letter-spacing:1px;color:var(--ash);padding-bottom:6px;flex-shrink:0;}
+.sec-rule{height:1px;background:var(--ash);margin-bottom:0;}
+
+/* ─────────────────────────────────────────────────
+   TWO-COLUMN PANEL ROW  (US + CN, Weibo + XHS)
+───────────────────────────────────────────────── */
+.panel-row{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:var(--gap);
+  background:var(--ash);
+  border:1px solid var(--ash);
+  margin-bottom:32px;
+}
+.panel{background:var(--ink);display:flex;flex-direction:column;}
+.panel .sec-hd{padding:20px 20px 12px;}
+.panel .sec-num{font-size:52px;}
+.panel .sec-title{font-size:16px;}
+
+/* ─────────────────────────────────────────────────
+   NEWS LIST  (all sections)
+───────────────────────────────────────────────── */
+.news-list{display:flex;flex-direction:column;flex:1;}
+.news-item{
+  display:flex;flex-direction:column;gap:6px;
+  padding:14px 20px;
+  border-top:1px solid var(--smoke);
+  position:relative;overflow:hidden;
+  transition:background .15s;cursor:default;
+}
+.news-item:first-child{border-top:1px solid var(--ash);}
+.news-item:hover{background:var(--paper);}
+.news-item::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--ia,var(--us));
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform .25s ease;
+}
+.news-item:hover::before{transform:scaleY(1);}
+
+/* header row: tag + time */
+.ni-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.ni-badge{
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  padding:2px 7px;border-radius:var(--r);
+  white-space:nowrap;flex-shrink:0;
+}
+.ni-time{font-family:var(--fm);font-size:10px;color:var(--mist);white-space:nowrap;flex-shrink:0;}
+
+/* title */
+.ni-title{font-size:13px;font-weight:500;color:var(--snow);line-height:1.6;}
+.ni-title a{color:inherit;}
+.ni-title a:hover{color:var(--cloud);}
+
+/* summary */
+.ni-sum{font-size:12px;font-weight:300;color:var(--mist);line-height:1.75;}
+
+/* footer row: source */
+.ni-ft{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding-top:6px;border-top:1px solid var(--smoke);margin-top:2px;
+}
+.ni-src{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--ash);}
+.ni-src-dot{color:var(--ash);}
+
+/* ─────────────────────────────────────────────────
+   EAI SECTION  (full-width, 2-col grid inside)
+───────────────────────────────────────────────── */
+.eai-wrap{
+  border:1px solid var(--ash);background:var(--ink);
+  margin-bottom:32px;
+}
+.eai-inner{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  background:var(--ash);gap:var(--gap);
+}
+.eai-inner .news-item{background:var(--ink);}
+.eai-inner .news-item:hover{background:var(--paper);}
+.eai-inner .news-item:first-child{border-top:1px solid var(--smoke);}
+
+/* ─────────────────────────────────────────────────
+   TREND LIST  (Weibo / XHS)
+───────────────────────────────────────────────── */
+.trend-list{display:flex;flex-direction:column;flex:1;}
+.trend-item{
+  display:flex;align-items:flex-start;gap:12px;
+  padding:12px 20px;
+  border-top:1px solid var(--smoke);
+  transition:background .15s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.trend-item:first-child{border-top:1px solid var(--ash);}
+.trend-item:hover{background:var(--paper);}
+.trend-item::before{
+  content:'';position:absolute;left:0;top:0;bottom:0;
+  width:3px;background:var(--ia,var(--wb));
+  transform:scaleY(0);transform-origin:bottom;
+  transition:transform .25s ease;
+}
+.trend-item:hover::before{transform:scaleY(1);}
+.t-rank{
+  font-family:var(--fd);font-size:20px;line-height:1;
+  min-width:22px;text-align:right;padding-top:2px;flex-shrink:0;
+}
+.t-rank.hot{color:var(--us);}
+.t-rank.warm{color:var(--cn);}
+.t-rank.cool{color:var(--mist);}
+.t-body{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0;}
+.t-title{font-size:13px;font-weight:500;color:var(--snow);line-height:1.5;}
+.t-title a{color:inherit;}
+.t-sum{font-size:11.5px;font-weight:300;color:var(--mist);line-height:1.65;}
+.t-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:2px;}
+.t-src{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ash);}
+.t-badge{
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:1px;padding:2px 6px;border-radius:var(--r);
+  white-space:nowrap;flex-shrink:0;
+}
+
+/* ─────────────────────────────────────────────────
+   STOCK TERMINAL
+───────────────────────────────────────────────── */
+.stock-wrap{
+  border:1px solid var(--ash);background:var(--ink);
+  margin-bottom:32px;
+}
+.stock-mkt-hd{
+  font-family:var(--fd);font-size:10px;letter-spacing:4px;color:var(--mist);
+  padding:10px 20px 8px;border-bottom:1px solid var(--smoke);
+  background:var(--paper);
+}
+.stock-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:var(--gap);background:var(--ash);
+}
+.stock-cell{
+  background:var(--ink);padding:18px 20px;
+  display:flex;flex-direction:column;gap:4px;
+  transition:background .15s;cursor:default;
+  position:relative;overflow:hidden;
+}
+.stock-cell:hover{background:var(--paper);}
+.sc-header{display:flex;justify-content:space-between;align-items:flex-start;}
+.sc-name{font-family:var(--fu);font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--cloud);}
+.sc-code{font-family:var(--fm);font-size:9px;color:var(--mist);}
+.sc-price{font-family:var(--fd);font-size:30px;letter-spacing:-1px;line-height:1.1;color:var(--snow);margin:4px 0;}
+.sc-changes{display:flex;align-items:center;gap:8px;}
+.sc-pct{
+  font-family:var(--fu);font-size:11px;font-weight:700;
+  padding:2px 8px;border-radius:var(--r);
+}
+.sc-amt{font-family:var(--fu);font-size:10px;color:var(--mist);}
+.stock-cell.up .sc-pct{color:var(--up);background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.2);}
+.stock-cell.up .sc-price{color:var(--snow);}
+.stock-cell.dn .sc-pct{color:var(--dn);background:rgba(232,57,42,.1);border:1px solid rgba(232,57,42,.2);}
+.stock-sep{height:1px;background:var(--ash);}
+
+/* ─────────────────────────────────────────────────
+   HEALTH PANEL
+───────────────────────────────────────────────── */
+.health-wrap{
+  margin-top:40px;
+  border-top:1px solid var(--ash);
+}
+summary.health-sum{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;cursor:pointer;user-select:none;
+  list-style:none;
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--mist);
+}
+summary.health-sum::-webkit-details-marker{display:none;}
+.health-toggle{margin-left:auto;font-size:8px;font-weight:700;letter-spacing:2px;color:var(--ash);}
+details[open] .health-toggle::after{content:'▲ COLLAPSE';}
+details:not([open]) .health-toggle::after{content:'▼ EXPAND';}
+.health-score{font-family:var(--fd);font-size:13px;letter-spacing:2px;color:var(--health);}
+.health-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:var(--gap);background:var(--smoke);
+  border:1px solid var(--smoke);
+}
+.hi{background:var(--ink);padding:12px 16px;display:flex;flex-direction:column;gap:4px;}
+.hi-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.hi-name{font-family:var(--fu);font-size:9px;font-weight:700;letter-spacing:1px;color:var(--cloud);}
+.hi-st{
+  font-family:var(--fu);font-size:7px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:2px 6px;border-radius:var(--r);white-space:nowrap;flex-shrink:0;
+}
+.hi-st.ok{color:var(--up);background:rgba(0,200,150,.1);border:1px solid rgba(0,200,150,.2);}
+.hi-st.warn{color:var(--cn);background:rgba(232,154,32,.1);border:1px solid rgba(232,154,32,.2);}
+.hi-st.err{color:var(--us);background:rgba(232,57,42,.1);border:1px solid rgba(232,57,42,.2);}
+.hi-st.unknown{color:var(--mist);background:rgba(114,114,106,.1);border:1px solid var(--ash);}
+.hi-detail{font-size:11px;font-weight:300;color:var(--mist);line-height:1.6;}
+.hi-time{font-family:var(--fm);font-size:9px;color:var(--ash);}
+
+/* ─────────────────────────────────────────────────
+   SKELETON
+───────────────────────────────────────────────── */
+.skel-list{display:flex;flex-direction:column;}
+.skel-item{
+  padding:14px 20px;border-top:1px solid var(--smoke);
+  display:flex;flex-direction:column;gap:7px;background:var(--ink);
+}
+.skel-item:first-child{border-top:1px solid var(--ash);}
+.sl{background:var(--smoke);border-radius:2px;animation:pulse 1.6s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+.skel-stock-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  gap:var(--gap);background:var(--ash);
+}
+.skel-stock-cell{background:var(--ink);padding:18px 20px;display:flex;flex-direction:column;gap:6px;}
+
+.skel-trend{display:flex;flex-direction:column;}
+.skel-trend-item{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 20px;border-top:1px solid var(--smoke);background:var(--ink);
+}
+.skel-trend-item:first-child{border-top:1px solid var(--ash);}
+
+/* ─────────────────────────────────────────────────
+   EMPTY / ERROR
+───────────────────────────────────────────────── */
+.empty{
+  padding:24px 20px;background:var(--ink);
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--ash);
+}
+.error{
+  padding:16px 20px;background:var(--ink);
+  font-family:var(--fu);font-size:9px;font-weight:600;
+  letter-spacing:1px;color:var(--us);
+  border-left:3px solid var(--us);
+}
+
+/* ─────────────────────────────────────────────────
+   MODAL / DIALOG
+───────────────────────────────────────────────── */
+dialog{
+  border:1px solid var(--ash);border-radius:0;
+  background:var(--ink);color:var(--snow);
+  width:min(660px,calc(100vw - 20px));
+  max-height:90vh;overflow-y:auto;padding:0;
+}
+dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
+.mdl-head{
+  padding:14px 20px;border-bottom:1px solid var(--ash);
+  display:flex;justify-content:space-between;align-items:center;
+  position:sticky;top:0;background:var(--ink);z-index:1;
+}
+.mdl-ttl{font-family:var(--fu);font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--cloud);}
+.mdl-body{padding:18px 20px;display:grid;gap:12px;}
+.mdl-sec{
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:3px;text-transform:uppercase;color:var(--mist);
+  padding:4px 0 0;border-top:1px solid var(--ash);margin-top:2px;
+}
+.mdl-g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.fld{display:grid;gap:4px;}
+.fld label{font-family:var(--fu);font-size:8px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--mist);}
+.fld label.req::after{content:' *';color:var(--us);}
+.fld input,.fld textarea{
+  width:100%;background:var(--void);border:1px solid var(--ash);border-radius:var(--r);
+  color:var(--snow);font-family:var(--fm);font-size:12px;
+  padding:8px 10px;outline:none;transition:border-color .15s;
+}
+.fld input:focus,.fld textarea:focus{border-color:var(--mkt);}
+.fld textarea{resize:vertical;min-height:60px;}
+.mdl-foot{
+  padding:12px 20px;border-top:1px solid var(--ash);
+  display:flex;justify-content:flex-end;gap:8px;
+  position:sticky;bottom:0;background:var(--ink);
+}
+.mdl-note{
+  font-family:var(--fb);font-size:11px;font-weight:300;
+  color:var(--mist);line-height:1.8;
+  padding:10px 12px;border:1px solid var(--smoke);background:var(--paper);
+}
+
+/* ─────────────────────────────────────────────────
+   FOOTER
+───────────────────────────────────────────────── */
+.footer{
+  padding:16px var(--pad);
+  border-top:1px solid var(--ash);background:var(--ink);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+}
+.ft-logo{font-family:var(--fd);font-size:14px;letter-spacing:5px;color:var(--ash);}
+.ft-note{font-family:var(--fu);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ash);}
+
+/* ─────────────────────────────────────────────────
+   ANIMATION
+───────────────────────────────────────────────── */
+.fade-in{animation:fi .38s ease forwards;}
+@keyframes fi{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ─────────────────────────────────────────────────
+   RESPONSIVE
+───────────────────────────────────────────────── */
+
+/* Tablet  ≤ 1024px */
+@media(max-width:1024px){
+  :root{--pad:20px;}
+  .sec-num{font-size:56px;}
+  .sc-price{font-size:24px;}
+  .stock-grid,.skel-stock-grid{grid-template-columns:repeat(3,1fr);}
+  .eai-inner{grid-template-columns:1fr 1fr;}
+  .tb-clock,.tb-cd{display:none;}
+}
+
+/* Mobile  ≤ 680px */
+@media(max-width:680px){
+  :root{--pad:12px;}
+  .tb-inner{padding:0 12px;}
+  /* Stack 2-col rows */
+  .panel-row{grid-template-columns:1fr;}
+  .eai-inner{grid-template-columns:1fr;}
+  /* Stock: 2 per row */
+  .stock-grid,.skel-stock-grid{grid-template-columns:1fr 1fr;}
+  /* Hide extras in topbar */
+  .tb-brand .tb-sub{display:none;}
+  .btn:not(.primary):not(#refreshBtn):not(#apiConfigBtn){display:none;}
+  /* Section heads */
+  .sec-num{font-size:44px;}
+  .sec-title{font-size:15px;}
+  .panel .sec-num{font-size:36px;}
+  .panel .sec-title{font-size:14px;}
+  .panel .sec-hd{padding:14px 14px 10px;}
+  .news-item,.trend-item{padding:12px 14px;}
+  .stock-cell{padding:14px 14px;}
+  .sc-price{font-size:22px;}
+  .health-grid{grid-template-columns:1fr;}
+}
+
+/* Very small mobile  ≤ 380px */
+@media(max-width:380px){
+  .stock-grid,.skel-stock-grid{grid-template-columns:1fr;}
+  .tb-actions .btn:not(.primary){display:none;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ TOPBAR ══════════════════ -->
+<header class="topbar">
+  <div class="tb-inner">
+    <div class="tb-brand">
+      <div>
+        <div class="tb-logo">SIGNAL</div>
+        <div class="tb-sub">多源情报看板</div>
+      </div>
+    </div>
+    <div class="tb-clock">
+      <div class="tb-time" id="liveClock">--:--</div>
+      <div class="tb-date" id="liveDate">----</div>
+    </div>
+    <div class="tb-cd">
+      <div class="tb-cd-lbl">Auto Refresh</div>
+      <div class="tb-cd-val" id="countdownValue">60:00</div>
+    </div>
+    <div class="tb-status">
+      <div class="tb-dot" id="statusDot"></div>
+      <span class="tb-status-txt" id="statusText">初始化中</span>
+    </div>
+    <div class="tb-actions">
+      <button class="btn" id="demoBtn">演示</button>
+      <button class="btn" id="exportBtn">导出</button>
+      <button class="btn" id="configBtn">设置</button>
+      <button class="btn" id="apiConfigBtn">配置 API</button>
+      <button class="btn primary" id="refreshBtn">↻ 刷新</button>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════ TICKER ══════════════════ -->
+<div class="ticker">
+  <div class="ticker-badge">MARKET ●</div>
+  <div class="ticker-scroll" id="tickerTrack"></div>
+</div>
+
+<!-- ══════════════════ META BAR ════════════════ -->
+<div class="meta-bar">
+  <div class="mb-seg"><span class="mb-lbl">Source</span><span class="mb-val" id="endpointText">API 直连模式</span></div>
+  <div class="mb-seg" style="flex:1;min-width:0;overflow:hidden;">
+    <span class="mb-lbl">APIs</span>
+    <span class="mb-api-text" id="apiSummaryText" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">尚未配置</span>
+  </div>
+  <span class="mb-pill" id="apiConfiguredCount">0 / 6</span>
+</div>
+
+<!-- ══════════════════ PIPELINE ════════════════ -->
+<div class="pipeline-bar">
+  <div class="ps" id="ps-us"><div class="ps-dot"></div><span id="ps-us-text">美国新闻</span></div>
+  <div class="ps" id="ps-cn"><div class="ps-dot"></div><span id="ps-cn-text">中国新闻</span></div>
+  <div class="ps" id="ps-eai"><div class="ps-dot"></div><span id="ps-eai-text">能源AI</span></div>
+  <div class="ps" id="ps-stocks"><div class="ps-dot"></div><span id="ps-stocks-text">股市</span></div>
+  <div class="ps" id="ps-wb"><div class="ps-dot"></div><span id="ps-wb-text">微博</span></div>
+  <div class="ps" id="ps-xhs"><div class="ps-dot"></div><span id="ps-xhs-text">小红书</span></div>
+  <div class="ps" id="ps-claude"><div class="ps-dot"></div><span id="ps-claude-text">Claude 整合</span></div>
+</div>
+
+<!-- ══════════════════ CONTENT ═════════════════ -->
+<main class="wrap content">
+
+  <!-- ── ROW 1: US + CHINA NEWS ─────────────── -->
+  <div class="panel-row">
+    <!-- 01 美国新闻 -->
+    <div class="panel">
+      <div class="sec-hd">
+        <div class="sec-num">01</div>
+        <div class="sec-info">
+          <div class="sec-eye" style="color:var(--us)">🇺🇸 United States · AP · CNN · ABC · Reuters</div>
+          <div class="sec-title">美国新闻</div>
+        </div>
+        <div class="sec-cnt" id="count-us">—</div>
+      </div>
+      <div id="body-us" class="news-list"></div>
+    </div>
+    <!-- 02 中国新闻 -->
+    <div class="panel">
+      <div class="sec-hd">
+        <div class="sec-num">02</div>
+        <div class="sec-info">
+          <div class="sec-eye" style="color:var(--cn)">🇨🇳 China · 新华社 · 人民日报 · 央视</div>
+          <div class="sec-title">中国新闻</div>
+        </div>
+        <div class="sec-cnt" id="count-cn">—</div>
+      </div>
+      <div id="body-cn" class="news-list"></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 2: ENERGY & AI ─────────────────── -->
+  <div class="eai-wrap">
+    <div class="sec-hd" style="padding:20px 20px 12px;">
+      <div class="sec-num">03</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--eai)">⚡ Energy · AI · Technology · Global Trends</div>
+        <div class="sec-title">能源 &amp; AI 科技</div>
+      </div>
+      <div class="sec-cnt" id="count-eai">—</div>
+    </div>
+    <div id="body-eai" class="eai-inner"></div>
+  </div>
+
+  <!-- ── ROW 3: WEIBO + XHS ─────────────────── -->
+  <div class="panel-row">
+    <!-- 04 微博热搜 -->
+    <div class="panel">
+      <div class="sec-hd">
+        <div class="sec-num">04</div>
+        <div class="sec-info">
+          <div class="sec-eye" style="color:var(--wb)">🔥 Weibo Hot Search · 微博热搜榜</div>
+          <div class="sec-title">微博热搜</div>
+        </div>
+        <div class="sec-cnt" id="count-weibo">—</div>
+      </div>
+      <div id="body-weibo" class="trend-list"></div>
+    </div>
+    <!-- 05 小红书 -->
+    <div class="panel">
+      <div class="sec-hd">
+        <div class="sec-num">05</div>
+        <div class="sec-info">
+          <div class="sec-eye" style="color:var(--xhs)">📕 Xiaohongshu Trending · 小红书热榜</div>
+          <div class="sec-title">小红书热点</div>
+        </div>
+        <div class="sec-cnt" id="count-xhs">—</div>
+      </div>
+      <div id="body-xhs" class="trend-list"></div>
+    </div>
+  </div>
+
+  <!-- ── ROW 4: STOCKS ──────────────────────── -->
+  <div class="stock-wrap">
+    <div class="sec-hd" style="padding:20px 20px 12px;">
+      <div class="sec-num">06</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--mkt)">📈 Markets · Indices · Real-Time via Finnhub</div>
+        <div class="sec-title">股市指数</div>
+      </div>
+      <div class="sec-cnt" id="count-stocks">—</div>
+    </div>
+    <div id="body-stocks"></div>
+  </div>
+
+  <!-- ── HEALTH (collapsible, bottom) ──────── -->
+  <div class="health-wrap">
+    <details>
+      <summary class="health-sum">
+        <span style="color:var(--health);font-size:8px;letter-spacing:3px;font-weight:700;">● SYSTEM HEALTH</span>
+        <span class="health-score" id="healthScoreValue">—</span>
+        <span style="font-family:var(--fu);font-size:8px;letter-spacing:1px;color:var(--ash)" id="health-pill">源状态</span>
+        <span class="health-toggle"></span>
+      </summary>
+      <div class="health-grid" id="body-health"></div>
+    </details>
+  </div>
+
+</main>
+
+<!-- ══════════════════ FOOTER ══════════════════ -->
+<footer class="footer">
+  <div class="ft-logo">SIGNAL</div>
+  <div class="ft-note">GNews · Gemini · 混元 · Finnhub · Crawler · Claude · GitHub Pages</div>
+</footer>
+
+<!-- ══════════════════ DIALOGS ═════════════════ -->
+
+<dialog id="configDialog">
+  <div class="mdl-head">
+    <span class="mdl-ttl">刷新设置</span>
+    <button class="btn" id="closeConfigBtn">关闭</button>
+  </div>
+  <div class="mdl-body">
+    <div class="mdl-note">看板从各 API 直接拉取，每次刷新依次调用 GNews → Gemini → 混元 → Finnhub → 爬虫 → Claude。</div>
+    <div class="fld">
+      <label>自动刷新间隔（分钟）</label>
+      <input id="refreshInput" type="number" min="15" max="1440" placeholder="60"/>
+    </div>
+  </div>
+  <div class="mdl-foot">
+    <button class="btn" id="resetConfigBtn">恢复默认</button>
+    <button class="btn primary" id="saveConfigBtn">保存</button>
+  </div>
+</dialog>
+
+<dialog id="apiConfigDialog">
+  <div class="mdl-head">
+    <span class="mdl-ttl">配置多源 API（仅本地 localStorage）</span>
+    <button class="btn" id="closeApiConfigBtn">关闭</button>
+  </div>
+  <div class="mdl-body">
+    <div class="mdl-note">密钥仅保存在本地浏览器，不上传任何服务器。<span style="color:var(--us)">*</span> 为对应功能必填项。所有 API 密钥均存储在 Cloudflare Worker 环境变量中，前端只需填写 Worker 地址。</div>
+
+    <div class="mdl-sec">🔌 Cloudflare Worker 代理地址（必须先配置）</div>
+    <div class="fld"><label class="req">Worker URL</label><input id="workerUrlInput" placeholder="https://signal-proxy.your-name.workers.dev"/></div>
+    <div style="font-family:var(--fu);font-size:8px;letter-spacing:1px;color:var(--mist);padding:2px 0 4px;">Worker 已部署后，前端的所有 API 调用都通过它转发，密钥存在 Worker 环境变量中不暴露到浏览器。</div>
+
+    <div class="mdl-sec">📰 美国新闻 · 能源AI 数据源（二选一）</div>
+    <div class="mdl-g2">
+      <div class="fld"><label class="req">GNews API Key（主）</label><input id="gnewsKeyInput" type="password" placeholder="gnews.io token"/></div>
+      <div class="fld"><label>NewsAPI Key（备选）</label><input id="newsapiKeyInput" type="password" placeholder="newsapi.org key"/></div>
+    </div>
+
+    <div class="mdl-sec">🤖 Gemini · 美国新闻 &amp; 能源AI 整合</div>
+    <div class="mdl-g2">
+      <div class="fld"><label class="req">Gemini API Key</label><input id="geminiKeyInput" type="password" placeholder="AIza..."/></div>
+      <div class="fld"><label>Gemini 模型</label><input id="geminiModelInput" placeholder="gemini-2.0-flash"/></div>
+    </div>
+
+    <div class="mdl-sec">🇨🇳 腾讯混元 · 中国新闻</div>
+    <div class="mdl-g2">
+      <div class="fld"><label class="req">混元 API Key</label><input id="hunyuanKeyInput" type="password" placeholder="Bearer Token"/></div>
+      <div class="fld"><label>混元模型</label><input id="hunyuanModelInput" placeholder="hunyuan-turbos-latest"/></div>
+    </div>
+    <div class="fld"><label>混元自定义 Endpoint（代理/留空用官方地址）</label><input id="hunyuanEndpointInput" placeholder="https://api.hunyuan.cloud.tencent.com/v1/chat/completions"/></div>
+
+    <div class="mdl-sec">📈 Finnhub · 实时股市指数</div>
+    <div class="fld"><label class="req">Finnhub API Key</label><input id="finnhubKeyInput" type="password" placeholder="finnhub.io token"/></div>
+
+    <div class="mdl-sec">✨ Claude · 最终整合去重排序</div>
+    <div class="mdl-g2">
+      <div class="fld"><label class="req">Claude API Key</label><input id="claudeKeyInput" type="password" placeholder="sk-ant-..."/></div>
+      <div class="fld"><label>Claude 模型</label><input id="claudeModelInput" placeholder="claude-sonnet-4-20250514"/></div>
+    </div>
+
+    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 服务端爬虫</div>
+    <div class="mdl-g2">
+      <div class="fld"><label>微博爬虫 JSON 地址</label><input id="weiboCrawlerInput" placeholder="https://your-worker.example.com/weibo"/></div>
+      <div class="fld"><label>小红书爬虫 JSON 地址</label><input id="xhsCrawlerInput" placeholder="https://your-worker.example.com/xhs"/></div>
+    </div>
+
+    <div class="mdl-sec">备注</div>
+    <div class="fld"><textarea id="apiNoteInput" placeholder="自定义备注…"></textarea></div>
+  </div>
+  <div class="mdl-foot">
+    <button class="btn" id="clearApiConfigBtn">清空</button>
+    <button class="btn primary" id="saveApiConfigBtn">保存配置</button>
+  </div>
+</dialog>
+
+<script>
+
+// ═══════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════
+const DEFAULT_REFRESH = 60;
+const STORAGE_KEY     = 'signal_v3_config';
+const API_KEY_STORAGE = 'signal_v3_apikeys';
+const COOLDOWN_MS     = 15000;
+
+const FINNHUB_INDICES = [
+  { name:'标普500',   symbol:'^GSPC',      display:'SPX'        },
+  { name:'纳斯达克',  symbol:'^IXIC',      display:'IXIC'       },
+  { name:'道琼斯',    symbol:'^DJI',       display:'DJI'        },
+  { name:'上证综指',  symbol:'SSE:000001', display:'000001.SS'  },
+  { name:'深证成指',  symbol:'SZSE:399001',display:'399001.SZ'  },
+  { name:'恒生指数',  symbol:'HKEX:HSI',   display:'HSI'        },
+];
+
+const API_FIELDS = [
+  'workerUrl',
+  'gnewsKey','newsapiKey',
+  'geminiKey','geminiModel',
+  'hunyuanKey','hunyuanModel','hunyuanEndpoint',
+  'finnhubKey',
+  'claudeKey','claudeModel',
+  'weiboCrawler','xhsCrawler',
+  'apiNote',
+];
+
+let state = {
+  refreshMinutes:   DEFAULT_REFRESH,
+  countdownSeconds: DEFAULT_REFRESH * 60,
+  loading:    false,
+  lastFetchAt: 0,
+  lastSections: {},
+  useDemo: false,
+  cfg: {},
+};
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, s =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[s]));
+const normArr = v => Array.isArray(v) ? v : [];
+const delay   = ms => new Promise(r => setTimeout(r, ms));
+
+function extractJSONArray(txt) {
+  txt = txt.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+  let start = txt.indexOf('[');
+  if (start === -1) return null;
+  let depth = 0, inStr = false, escaped = false, end = -1;
+  for (let i = start; i < txt.length; i++) {
+    const c = txt[i];
+    if (escaped)          { escaped = false; continue; }
+    if (c === '\\' && inStr) { escaped = true;  continue; }
+    if (c === '"')        { inStr = !inStr;  continue; }
+    if (inStr) continue;
+    if (c === '[') depth++;
+    else if (c === ']') { if (--depth === 0) { end = i; break; } }
+  }
+  if (end === -1) return null;
+  let json = txt.slice(start, end + 1)
+    .replace(/[\u0000-\u001f\u007f]/g, ' ')
+    .replace(/,(\s*[}\]])/g, '$1');
+  try { return JSON.parse(json); } catch { return null; }
+}
+
+function extractJSONObject(txt) {
+  txt = txt.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+  const s = txt.indexOf('{'), e = txt.lastIndexOf('}');
+  if (s === -1 || e === -1) return null;
+  try { return JSON.parse(txt.slice(s, e + 1)); } catch { return null; }
+}
+
+function mapStatus(s) {
+  const t = String(s || '').toLowerCase();
+  if (['ok','success','healthy','up'].includes(t))           return 'ok';
+  if (['warn','warning','degraded','fallback'].includes(t)) return 'warn';
+  if (['fail','error','down','bad'].includes(t))             return 'err';
+  return 'unknown';
+}
+
+// ═══════════════════════════════════════════════════════
+// PIPELINE STATUS UI
+// ═══════════════════════════════════════════════════════
+function ps(id, tone, label) {
+  const el  = $(`ps-${id}`);
+  const txt = $(`ps-${id}-text`);
+  if (!el) return;
+  el.className = `ps ${tone}`;
+  if (txt && label) txt.textContent = label;
+}
+
+function setStatus(text, tone = '') {
+  $('statusText').textContent = text;
+  const dot = $('statusDot');
+  dot.className = 'tb-dot';
+  if (tone === 'warn') dot.classList.add('warn');
+  if (tone === 'err')  dot.classList.add('err');
+}
+
+// ═══════════════════════════════════════════════════════
+// WORKER PROXY LAYER
+// Keys are sent in the request body — Worker just forwards them.
+// This way you only need the Worker URL; no Cloudflare Secrets setup.
+// ═══════════════════════════════════════════════════════
+function getWorkerBase() {
+  const base = (state.cfg.workerUrl || '').replace(/\/+$/, '');
+  if (!base) throw new Error('请先在「配置 API」中填写 Worker URL');
+  return base;
+}
+
+async function wPost(path, body) {
+  const r = await fetch(getWorkerBase() + path, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(body),
+  });
+  let d;
+  try { d = await r.json(); } catch { throw new Error(`Worker ${r.status} (非 JSON 响应)`); }
+  if (!r.ok) throw new Error(d?.error || `Worker ${r.status}`);
+  return d;
+}
+
+async function wGet(path) {
+  const r = await fetch(getWorkerBase() + path);
+  let d;
+  try { d = await r.json(); } catch { throw new Error(`Worker ${r.status} (非 JSON 响应)`); }
+  if (!r.ok) throw new Error(d?.error || `Worker ${r.status}`);
+  return d;
+}
+
+// ── GNews ──────────────────────────────────────────────
+async function gnewsFetch(q, lang = 'en', max = 10) {
+  const d = await wPost('/api/gnews', { q, lang, max, key: state.cfg.gnewsKey });
+  return normArr(d.articles);
+}
+
+// ── NewsAPI ────────────────────────────────────────────
+async function newsapiFetch(q, sources) {
+  const d = await wPost('/api/newsapi', { q, sources, key: state.cfg.newsapiKey });
+  return normArr(d.articles);
+}
+
+// ── Gemini ─────────────────────────────────────────────
+async function geminiFetch(prompt, model) {
+  const d = await wPost('/api/gemini', {
+    prompt, key: state.cfg.geminiKey,
+    model: model || state.cfg.geminiModel || 'gemini-2.0-flash',
+  });
+  return d.text || '';
+}
+
+// ── Hunyuan ────────────────────────────────────────────
+async function hunyuanFetch(messages) {
+  const d = await wPost('/api/hunyuan', {
+    messages,
+    key:      state.cfg.hunyuanKey,
+    model:    state.cfg.hunyuanModel    || 'hunyuan-turbos-latest',
+    endpoint: state.cfg.hunyuanEndpoint || '',
+  });
+  return d.text || '';
+}
+
+// ── Finnhub ────────────────────────────────────────────
+async function finnhubBatch() {
+  const d = await wPost('/api/finnhub', { symbols: FINNHUB_INDICES, key: state.cfg.finnhubKey });
+  return normArr(d.quotes);
+}
+
+// ── Claude ─────────────────────────────────────────────
+async function claudeCall(prompt) {
+  const d = await wPost('/api/claude', {
+    prompt,
+    key:   state.cfg.claudeKey,
+    model: state.cfg.claudeModel || 'claude-sonnet-4-20250514',
+  });
+  return d.text || '';
+}
+
+// ── Crawlers ───────────────────────────────────────────
+async function crawlerFetch(type) {
+  return wGet(`/api/${type}`);
+}
+
+// ═══════════════════════════════════════════════════════
+// SECTION LOADERS
+// ═══════════════════════════════════════════════════════
+async function loadUSNews() {
+  ps('us', 'loading', '美国新闻 · 抓取中');
+  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey)
+    throw new Error('请配置 GNews 或 NewsAPI Key');
+
+  let articles = [];
+  try {
+    articles = await gnewsFetch('United States breaking news politics economy', 'en', 10);
+  } catch {
+    articles = await newsapiFetch('', 'associated-press,abc-news,cnn,reuters');
+  }
+
+  ps('us', 'loading', '美国新闻 · Gemini 整合中');
+  if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
+
+  const articleText = articles.slice(0, 10).map((a, i) =>
+    `${i + 1}. Title: ${a.title || ''}\nDesc: ${a.description || ''}\nSource: ${a.source?.name || a.source || 'AP'}`
+  ).join('\n\n');
+
+  const txt = await geminiFetch(`请将以下英文新闻整理为中文摘要。今天是${new Date().toLocaleDateString('zh-CN')}。
+返回纯JSON数组，无代码块，每条格式：{"title":"中文标题(20字内)","summary":"2句摘要(80字内)","tag":"分类词","source":"媒体名"}
+英文原文：\n${articleText}`);
+
+  const result = extractJSONArray(txt);
+  if (!result?.length) throw new Error('Gemini 返回格式异常，请重试');
+  result.forEach((item, i) => {
+    if (articles[i]?.url)         item.url         = articles[i].url;
+    if (articles[i]?.publishedAt) item.published_at = articles[i].publishedAt;
+  });
+  ps('us', 'ok', `美国新闻 · ${result.length} 条`);
+  return result;
+}
+
+async function loadCNNews() {
+  ps('cn', 'loading', '中国新闻 · 混元搜索中');
+  if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
+
+  const txt = await hunyuanFetch([{ role: 'user', content:
+    `今天是${new Date().toLocaleDateString('zh-CN')}。请搜索今日中国最重要的10条新闻热点，来源优先选择新华社、人民日报、央视新闻。
+返回纯JSON数组，无代码块，每条格式：{"title":"标题(20字内)","summary":"2句摘要(80字内)","tag":"分类词","source":"媒体名"}`
+  }]);
+  const result = extractJSONArray(txt);
+  if (!result?.length) throw new Error('混元返回格式异常，请重试');
+  ps('cn', 'ok', `中国新闻 · ${result.length} 条`);
+  return result;
+}
+
+async function loadEAINews() {
+  ps('eai', 'loading', '能源AI · 抓取中');
+  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey)
+    throw new Error('请配置 GNews 或 NewsAPI Key');
+
+  let articles = [];
+  try {
+    articles = await gnewsFetch('artificial intelligence energy renewable AI technology', 'en', 10);
+  } catch {
+    articles = await newsapiFetch('AI energy technology', null);
+  }
+
+  ps('eai', 'loading', '能源AI · Gemini 整合中');
+  if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
+
+  const articleText = articles.slice(0, 10).map((a, i) =>
+    `${i + 1}. Title: ${a.title || ''}\nDesc: ${a.description || ''}\nSource: ${a.source?.name || a.source || ''}`
+  ).join('\n\n');
+
+  const txt = await geminiFetch(`请将以下英文能源/AI科技新闻整理为中文。今天是${new Date().toLocaleDateString('zh-CN')}。
+返回纯JSON数组，无代码块，每条格式：{"title":"中文标题(20字内)","summary":"2句摘要(80字内)","tag":"能源 or AI","source":"媒体名"}
+英文原文：\n${articleText}`);
+
+  const result = extractJSONArray(txt);
+  if (!result?.length) throw new Error('Gemini 返回格式异常，请重试');
+  result.forEach((item, i) => {
+    if (articles[i]?.url)         item.url         = articles[i].url;
+    if (articles[i]?.publishedAt) item.published_at = articles[i].publishedAt;
+  });
+  ps('eai', 'ok', `能源AI · ${result.length} 条`);
+  return result;
+}
+
+async function loadStocks() {
+  ps('stocks', 'loading', '股市 · Finnhub 报价中');
+  if (!state.cfg.finnhubKey) throw new Error('请配置 Finnhub API Key');
+  const results = await finnhubBatch();
+  const okCount = results.filter(r => !r.error).length;
+  ps('stocks', 'ok', `股市 · ${okCount}/6 指数`);
+  return results;
+}
+
+async function loadWeibo() {
+  ps('wb', 'loading', '微博 · 爬虫请求中');
+  try {
+    const data = await crawlerFetch('weibo');
+    const items = normArr(data.weibo || data.items || data);
+    ps('wb', 'ok', `微博 · ${items.length} 条`);
+    return items;
+  } catch (e) {
+    ps('wb', 'skip', '微博 · 爬虫未配置');
+    return null;
+  }
+}
+
+async function loadXHS() {
+  ps('xhs', 'loading', '小红书 · 爬虫请求中');
+  try {
+    const data = await crawlerFetch('xhs');
+    const items = normArr(data.xiaohongshu || data.xhs || data.items || data);
+    ps('xhs', 'ok', `小红书 · ${items.length} 条`);
+    return items;
+  } catch (e) {
+    ps('xhs', 'skip', '小红书 · 爬虫未配置');
+    return null;
+  }
+}
+
+async function claudeIntegrate(sections) {
+  const payload = JSON.stringify({
+    us_news:     (sections.us     || []).slice(0, 12),
+    china_news:  (sections.cn     || []).slice(0, 12),
+    energy_ai:   (sections.eai    || []).slice(0, 12),
+    weibo:       (sections.wb     || []).slice(0, 10),
+    xiaohongshu: (sections.xhs    || []).slice(0, 10),
+    stocks:      (sections.stocks || []),
+  }, null, 0);
+
+  const txt = await claudeCall(
+    `今天是${new Date().toLocaleDateString('zh-CN')}。对以下各板块数据：1)去重(含义相近只留一条) 2)确认格式含title/summary/tag/source 3)按重要性排序最多10条 4)weibo/xiaohongshu/stocks保持原样。返回纯JSON对象，键名不变。\n输入：${payload}`
+  );
+  return extractJSONObject(txt);
+}
+
+// ═══════════════════════════════════════════════════════
+// MAIN ORCHESTRATION
+// ═══════════════════════════════════════════════════════
+async function loadAll() {
+  if (state.loading) return;
+  if (Date.now() - state.lastFetchAt < COOLDOWN_MS) return;
+  state.loading    = true;
+  state.lastFetchAt = Date.now();
+  $('refreshBtn').disabled    = true;
+  $('refreshBtn').textContent = '↻ 加载中';
+  setStatus('管线启动中…');
+
+  ['us','cn','eai','stocks','wb','xhs','claude'].forEach(id => ps(id, '', '--'));
+  $('body-us').innerHTML     = skelCards(5);
+  $('body-cn').innerHTML     = skelCards(5);
+  $('body-eai').innerHTML    = skelCards(6);
+  $('body-stocks').innerHTML = skelStocks();
+  $('body-weibo').innerHTML  = skelTrend(6);
+  $('body-xhs').innerHTML    = skelTrend(6);
+
+  const sections    = {};
+  const healthItems = [];
+
+  const phases = [
+    { key:'us',     fn: loadUSNews,  bodyId:'body-us',     render: d => renderNews(d,'var(--us)'),   cnt:'count-us'     },
+    { key:'cn',     fn: loadCNNews,  bodyId:'body-cn',     render: d => renderNews(d,'var(--cn)'),   cnt:'count-cn'     },
+    { key:'eai',    fn: loadEAINews, bodyId:'body-eai',    render: d => renderNews(d,'var(--eai)'),  cnt:'count-eai'    },
+    { key:'stocks', fn: loadStocks,  bodyId:'body-stocks', render: d => renderStocks(d),             cnt:'count-stocks' },
+    { key:'wb',     fn: loadWeibo,   bodyId:'body-weibo',  render: d => renderTrend(d,'var(--wb)'),  cnt:'count-weibo'  },
+    { key:'xhs',    fn: loadXHS,     bodyId:'body-xhs',    render: d => renderTrend(d,'var(--xhs)'), cnt:'count-xhs'    },
+  ];
+
+  for (const ph of phases) {
+    try {
+      const result = await ph.fn();
+      if (result !== null) {
+        sections[ph.key] = result;
+        $(ph.bodyId).innerHTML = ph.render(result);
+        $(ph.cnt).textContent  = Array.isArray(result) ? result.length : '—';
+        state.lastSections[ph.key] = result;
+        healthItems.push({ name: ph.key, status: 'ok', detail: '成功' });
+      }
+    } catch (e) {
+      ps(ph.key, 'err', `${ph.key} · 失败`);
+      const cached = state.lastSections[ph.key];
+      $(ph.bodyId).innerHTML = cached
+        ? ph.render(cached)
+        : `<div class="error">⚠ ${esc(e.message)}</div>`;
+      if (cached) $(ph.cnt).textContent = Array.isArray(cached) ? cached.length : '—';
+      healthItems.push({ name: ph.key, status: 'err', detail: e.message.slice(0, 80) });
+    }
+    await delay(1800);
+  }
+
+  // Claude integration (optional)
+  if (state.cfg.claudeKey && (sections.us || sections.cn || sections.eai)) {
+    ps('claude', 'loading', 'Claude · 整合去重中');
+    try {
+      setStatus('Claude 最终整合中…');
+      const integrated = await claudeIntegrate(sections);
+      if (integrated) {
+        const mapping = {
+          us_news:    { bodyId:'body-us',     cnt:'count-us',     render: d => renderNews(d,'var(--us)')  },
+          china_news: { bodyId:'body-cn',     cnt:'count-cn',     render: d => renderNews(d,'var(--cn)')  },
+          energy_ai:  { bodyId:'body-eai',    cnt:'count-eai',    render: d => renderNews(d,'var(--eai)') },
+          stocks:     { bodyId:'body-stocks', cnt:'count-stocks', render: d => renderStocks(d)            },
+        };
+        let total = 0;
+        for (const [key, m] of Object.entries(mapping)) {
+          const arr = normArr(integrated[key]);
+          if (arr.length) {
+            $(m.bodyId).innerHTML = m.render(arr);
+            $(m.cnt).textContent  = arr.length;
+            total += arr.length;
+          }
+        }
+        ps('claude', 'ok', `Claude · 整合 ${total} 条`);
+        healthItems.push({ name: 'Claude 整合', status: 'ok', detail: `整合 ${total} 条` });
+      }
+    } catch (e) {
+      ps('claude', 'err', 'Claude · 整合失败');
+      healthItems.push({ name: 'Claude 整合', status: 'err', detail: e.message.slice(0, 80) });
+    }
+  } else {
+    ps('claude', 'skip', state.cfg.claudeKey ? 'Claude · 数据不足' : 'Claude · 未配置');
+  }
+
+  $('body-health').innerHTML = renderHealth(healthItems);
+  const okCount = healthItems.filter(h => h.status === 'ok').length;
+  $('healthScoreValue').textContent = `${okCount}/${healthItems.length}`;
+  $('health-pill').textContent      = `${healthItems.length} 个源`;
+  state.countdownSeconds = state.refreshMinutes * 60;
+
+  setStatus(`完成 · ${okCount}/${healthItems.length} 成功`);
+  state.loading = false;
+  $('refreshBtn').disabled    = false;
+  $('refreshBtn').textContent = '↻ 刷新';
+}
+
+// ═══════════════════════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════════════════════
+const DEMO = {
+  us: [
+    { title:'美联储官员发表最新货币政策表态', summary:'多位官员表示在通胀持续走软前不急于降息，市场全年降息预期收窄。', tag:'货币政策', source:'AP News' },
+    { title:'美股科技巨头Q1财报超预期', summary:'谷歌微软Meta均优于预期，AI基建投入继续加速，云业务成核心驱动力。', tag:'科技', source:'Reuters' },
+    { title:'国会债务上限谈判陷入僵局', summary:'两党围绕支出削减幅度分歧显著，若期限内无法达成协议将面临技术性违约。', tag:'政治', source:'ABC News' },
+    { title:'美国3月CPI涨幅好于预期', summary:'劳工统计局数据显示CPI同比涨3.2%，核心CPI环比涨幅为近年最低值。', tag:'经济', source:'AP News' },
+  ],
+  cn: [
+    { title:'国务院发布促消费政策，支持以旧换新', summary:'政策涵盖汽车家电家具，中央财政提供专项补贴，地方可配套叠加。', tag:'政策', source:'新华社' },
+    { title:'Q1 GDP增速5.3%超预期', summary:'工业生产和净出口贡献突出，国家统计局称经济开局平稳向好。', tag:'经济', source:'人民日报' },
+    { title:'国产大模型追平GPT-4级别', summary:'国内多家厂商密集发布升级版本，代码生成和数学推理维度显著提升。', tag:'AI', source:'央视新闻' },
+    { title:'"白名单"房企融资协调机制推进', summary:'政策性银行已就多个项目发放贷款，旨在保障交楼和改善房企现金流。', tag:'房地产', source:'新华社' },
+  ],
+  eai: [
+    { title:'谷歌发布Gemini 2.5 Pro', summary:'多模态推理能力大幅提升，支持百万Token上下文，多项基准刷新记录。', tag:'AI', source:'Google Blog' },
+    { title:'新能源车出口超10万辆创历史新高', summary:'比亚迪吉利奇瑞出口同比涨超50%，欧洲东南亚成主要增量市场。', tag:'能源', source:'Reuters' },
+    { title:'美国对AI数据中心扩建开绿色通道', summary:'白宫行政令要求30天内完成选址审批，并豁免部分环境评估要求。', tag:'AI', source:'AP News' },
+    { title:'IEA：2025年清洁能源投资首超化石燃料', summary:'可再生能源、电动汽车及电网投资合计1.7万亿美元，超过油气煤炭总和。', tag:'能源', source:'IEA' },
+  ],
+  weibo: [
+    { rank:1, title:'某知名演员宣布结婚', summary:'婚讯发布后阅读量三小时破亿，相关话题占据热搜前三。', tag:'热搜', source:'微博热搜' },
+    { rank:2, title:'多地极端高温橙色预警', summary:'华北长三角气温较历史同期偏高5-8度，预计持续5天。', tag:'热搜', source:'微博热搜' },
+    { rank:3, title:'国产科幻电影票房破20亿', summary:'上映第10天破20亿，特效和剧情讨论仍高度活跃。', tag:'热搜', source:'微博热搜' },
+    { rank:4, title:'知名主播账号被封30天', summary:'平台通报违反内容规范，粉丝反应两极分化。', tag:'热搜', source:'微博热搜' },
+    { rank:5, title:'985高校学生论文抄袭被取消学位', summary:'截图在微博广泛传播，引发学术诚信监管讨论。', tag:'热搜', source:'微博热搜' },
+  ],
+  xhs: [
+    { rank:1, title:'夏日平价护肤好物清单', summary:'多位博主推荐同款烟酰胺精华，评论区种草互动热烈。', tag:'种草', source:'小红书热榜' },
+    { rank:2, title:'上海周末CityWalk路线合集', summary:'徐汇滨江至衡复历史风貌区步行路线高口碑，收藏量破百万。', tag:'生活', source:'小红书热榜' },
+    { rank:3, title:'三餐营养便当打卡30天', summary:'极简备餐搭配营养配比，适合工作日减脂人群。', tag:'健康', source:'小红书热榜' },
+    { rank:4, title:'职场新人西装避坑指南', summary:'价格带建议与版型选择技巧，帮助应届生建立专业形象。', tag:'时尚', source:'小红书热榜' },
+  ],
+  stocks: [
+    { name:'标普500',  symbol:'SPX',        value:'5,312.22',  change:'+41.02', pct:'+0.78%', up:true  },
+    { name:'纳斯达克', symbol:'IXIC',        value:'16,603.11', change:'-45.18', pct:'-0.27%', up:false },
+    { name:'道琼斯',   symbol:'DJI',         value:'39,118.86', change:'+126.6', pct:'+0.32%', up:true  },
+    { name:'上证综指', symbol:'000001.SS',   value:'3,098.21',  change:'+8.33',  pct:'+0.27%', up:true  },
+    { name:'深证成指', symbol:'399001.SZ',   value:'9,862.45',  change:'-22.10', pct:'-0.22%', up:false },
+    { name:'恒生指数', symbol:'HSI',         value:'18,443.02', change:'+210.5', pct:'+1.15%', up:true  },
+  ],
+  health: [
+    { name:'GNews → 美国新闻原文',      status:'ok',   detail:'演示数据' },
+    { name:'Gemini → 美国新闻整合',     status:'ok',   detail:'演示数据' },
+    { name:'混元 → 中国新闻',          status:'ok',   detail:'演示数据' },
+    { name:'Finnhub → 股市指数',       status:'ok',   detail:'演示数据' },
+    { name:'Claude → 最终整合',        status:'ok',   detail:'演示数据' },
+    { name:'微博爬虫',                  status:'warn', detail:'爬虫未配置，演示占位' },
+    { name:'小红书爬虫',                status:'warn', detail:'爬虫未配置，演示占位' },
+  ],
+};
+
+async function loadDemo() {
+  ['us','cn','eai','stocks','wb','xhs','claude'].forEach(id => ps(id, 'ok', `${id} · 演示`));
+  $('body-us').innerHTML     = renderNews(DEMO.us,    'var(--us)');
+  $('body-cn').innerHTML     = renderNews(DEMO.cn,    'var(--cn)');
+  $('body-eai').innerHTML    = renderNews(DEMO.eai,   'var(--eai)');
+  $('body-weibo').innerHTML  = renderTrend(DEMO.weibo,'var(--wb)');
+  $('body-xhs').innerHTML    = renderTrend(DEMO.xhs,  'var(--xhs)');
+  $('body-stocks').innerHTML = renderStocks(DEMO.stocks);
+  $('body-health').innerHTML = renderHealth(DEMO.health);
+
+  $('count-us').textContent     = DEMO.us.length;
+  $('count-cn').textContent     = DEMO.cn.length;
+  $('count-eai').textContent    = DEMO.eai.length;
+  $('count-weibo').textContent  = DEMO.weibo.length;
+  $('count-xhs').textContent    = DEMO.xhs.length;
+  $('count-stocks').textContent = DEMO.stocks.length;
+  $('healthScoreValue').textContent = '5/7';
+  $('health-pill').textContent      = '7 个源';
+  setStatus('演示数据模式 — 点「配置 API」填入 Worker URL 后刷新');
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER FUNCTIONS
+// ═══════════════════════════════════════════════════════
+function renderNews(items, accentVar) {
+  if (!items?.length) return `<div class="empty">暂无数据</div>`;
+  return `<div class="fade-in" style="display:contents">${items.map(it => {
+    const link    = it.url || it.link;
+    const title   = link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${esc(it.title||'未命名')}</a>` : esc(it.title||'未命名');
+    const tag     = esc(it.tag || it.category || '资讯');
+    const src     = esc(it.source || it.outlet || '未知来源');
+    const pub     = it.published_at || it.time;
+    let   timeStr = '';
+    if (pub) try { timeStr = new Date(pub).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}); } catch {}
+    return `<article class="news-item" style="--ia:${accentVar}">
+      <div class="ni-hd">
+        <span class="ni-badge" style="color:${accentVar};background:${accentVar}18;border:1px solid ${accentVar}33">${tag}</span>
+        ${timeStr ? `<span class="ni-time">${timeStr}</span>` : ''}
+      </div>
+      <div class="ni-title">${title}</div>
+      <div class="ni-sum">${esc(it.summary||it.desc||it.description||'暂无摘要')}</div>
+      <div class="ni-ft"><span class="ni-src">${src}</span></div>
+    </article>`;
+  }).join('')}</div>`;
+}
+
+function renderTrend(items, accentVar) {
+  if (!items?.length) return `<div class="empty">暂无数据</div>`;
+  return `<div class="fade-in" style="display:contents">${items.map((it, i) => {
+    const link  = it.url || it.link;
+    const title = link ? `<a href="${esc(link)}" target="_blank" rel="noopener">${esc(it.title||'未命名')}</a>` : esc(it.title||'未命名');
+    const rc    = i < 3 ? 'hot' : i < 6 ? 'warm' : 'cool';
+    return `<div class="trend-item" style="--ia:${accentVar}">
+      <div class="t-rank ${rc}">${esc(it.rank || i + 1)}</div>
+      <div class="t-body">
+        <div class="t-title">${title}</div>
+        ${it.summary ? `<div class="t-sum">${esc(it.summary)}</div>` : ''}
+        <div class="t-meta"><span class="t-src">${esc(it.source||'')}</span></div>
+      </div>
+      <span class="t-badge" style="color:${accentVar};background:${accentVar}18;border:1px solid ${accentVar}33">${esc(it.tag||'热榜')}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderStocks(items) {
+  if (!items?.length) return `<div class="empty">暂无行情数据</div>`;
+  updateTicker(items);
+  const cell = s => {
+    const up = s.up === true || String(s.pct||'').trim().startsWith('+');
+    return `<div class="stock-cell ${s.error ? '' : (up ? 'up' : 'dn')}">
+      <div class="sc-header">
+        <span class="sc-name">${esc(s.name||'—')}</span>
+        <span class="sc-code">${esc(s.symbol||'')}</span>
+      </div>
+      <div class="sc-price">${esc(s.value||'N/A')}</div>
+      <div class="sc-changes">
+        ${s.error ? '' : `<span class="sc-pct">${up?'▲':'▼'} ${esc(s.pct||'—')}</span>`}
+        <span class="sc-amt">${esc(s.change||'—')}</span>
+      </div>
+    </div>`;
+  };
+  const us = items.slice(0, 3), cn = items.slice(3);
+  return `<div class="fade-in">
+    <div class="stock-mkt-hd">🇺🇸 US MARKETS — S&P 500 · NASDAQ · Dow Jones</div>
+    <div class="stock-grid">${us.map(cell).join('')}</div>
+    <div class="stock-sep"></div>
+    <div class="stock-mkt-hd">🇨🇳 CN MARKETS — 上证综指 · 深证成指 · 恒生指数</div>
+    <div class="stock-grid">${cn.map(cell).join('')}</div>
+  </div>`;
+}
+
+function renderHealth(items) {
+  if (!items?.length) return `<div class="empty">暂无健康度数据</div>`;
+  return `<div class="health-grid fade-in">${items.map(it => {
+    const s = mapStatus(it.status);
+    const label = { ok:'正常', warn:'警告', err:'故障', unknown:'未知' }[s];
+    return `<div class="hi">
+      <div class="hi-top">
+        <span class="hi-name">${esc(it.name||'未命名')}</span>
+        <span class="hi-st ${s}">${label}</span>
+      </div>
+      <div class="hi-detail">${esc(it.detail||it.message||'—')}</div>
+      ${it.updated_at ? `<div class="hi-time">${esc(it.updated_at)}</div>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// SKELETONS
+// ═══════════════════════════════════════════════════════
+function skelCards(n = 5) {
+  return `<div class="skel-list">${Array.from({ length: n }, (_, i) => `
+    <div class="skel-item">
+      <div style="display:flex;gap:8px;justify-content:space-between">
+        <div class="sl" style="height:9px;width:38px"></div>
+        <div class="sl" style="height:9px;width:60px"></div>
+      </div>
+      <div class="sl" style="height:12px;width:${60+(i*13)%25}%"></div>
+      <div class="sl" style="height:10px;width:100%"></div>
+      <div class="sl" style="height:10px;width:${72+(i*9)%18}%"></div>
+      <div style="display:flex;padding-top:8px;border-top:1px solid var(--smoke);margin-top:4px">
+        <div class="sl" style="height:8px;width:24%"></div>
+      </div>
+    </div>`).join('')}</div>`;
+}
+
+function skelTrend(n = 6) {
+  return `<div class="skel-trend">${Array.from({ length: n }, (_, i) => `
+    <div class="skel-trend-item">
+      <div class="sl" style="height:18px;width:18px;flex-shrink:0"></div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:5px">
+        <div class="sl" style="height:11px;width:${55+(i*14)%30}%"></div>
+        <div class="sl" style="height:9px;width:${65+(i*8)%20}%"></div>
+      </div>
+      <div class="sl" style="height:14px;width:30px"></div>
+    </div>`).join('')}</div>`;
+}
+
+function skelStocks() {
+  const c = () => `<div class="skel-stock-cell">
+    <div class="sl" style="height:8px;width:42%;margin-bottom:8px"></div>
+    <div class="sl" style="height:24px;width:65%;margin-bottom:7px"></div>
+    <div class="sl" style="height:9px;width:36%"></div>
+  </div>`;
+  return `<div>
+    <div class="stock-mkt-hd">🇺🇸 US MARKETS</div>
+    <div class="skel-stock-grid">${[0,1,2].map(c).join('')}</div>
+    <div class="stock-sep"></div>
+    <div class="stock-mkt-hd">🇨🇳 CN MARKETS</div>
+    <div class="skel-stock-grid">${[0,1,2].map(c).join('')}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// TICKER
+// ═══════════════════════════════════════════════════════
+function initTicker() {
+  const ph = ['S&P500','NASDAQ','DOW','上证','深证','恒生'].map(n =>
+    `<span class="ti"><span class="ti-sym">${n}</span><span class="ti-val">———</span></span>`
+  ).join('');
+  $('tickerTrack').innerHTML = ph + ph;
+}
+
+function updateTicker(stocks) {
+  if (!stocks?.length) return;
+  const h = stocks.filter(s => s.value !== 'N/A').map(s =>
+    `<span class="ti">
+      <span class="ti-sym">${esc(s.symbol||s.name)}</span>
+      <span class="ti-val">${esc(s.value)}</span>
+      <span class="ti-chg ${s.up?'up':'dn'}">${s.up?'▲':'▼'} ${esc(s.pct)}</span>
+    </span>`
+  ).join('');
+  $('tickerTrack').innerHTML = h + h;
+}
+
+// ═══════════════════════════════════════════════════════
+// CLOCK + COUNTDOWN
+// ═══════════════════════════════════════════════════════
+function startClock() {
+  function tick() {
+    const n = new Date();
+    $('liveClock').textContent = n.toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+    $('liveDate').textContent  = n.toLocaleDateString('zh-CN', { year:'numeric', month:'2-digit', day:'2-digit' }).replace(/\//g,'·');
+  }
+  setInterval(tick, 1000); tick();
+}
+
+function startTimer() {
+  setInterval(() => {
+    if (state.loading) return;
+    state.countdownSeconds--;
+    if (state.countdownSeconds <= 0) {
+      state.countdownSeconds = state.refreshMinutes * 60;
+      if (!state.useDemo) loadAll();
+    }
+    const mm = String(Math.floor(state.countdownSeconds / 60)).padStart(2, '0');
+    const ss = String(state.countdownSeconds % 60).padStart(2, '0');
+    const el = $('countdownValue');
+    if (el) { el.textContent = `${mm}:${ss}`; el.className = 'tb-cd-val' + (state.countdownSeconds < 120 ? ' warn' : ''); }
+  }, 1000);
+}
+
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+function loadConfig() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    state.refreshMinutes = Number(s.refreshMinutes) || DEFAULT_REFRESH;
+  } catch { state.refreshMinutes = DEFAULT_REFRESH; }
+  state.countdownSeconds = state.refreshMinutes * 60;
+}
+function saveConfig() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({ refreshMinutes: state.refreshMinutes }));
+}
+function loadApiConfig() {
+  try { state.cfg = JSON.parse(localStorage.getItem(API_KEY_STORAGE) || '{}') || {}; }
+  catch { state.cfg = {}; }
+}
+function saveApiConfig() {
+  localStorage.setItem(API_KEY_STORAGE, JSON.stringify(state.cfg || {}));
+}
+
+function countConfigured() {
+  const c = state.cfg || {};
+  return [c.workerUrl, c.gnewsKey||c.newsapiKey, c.geminiKey, c.hunyuanKey, c.finnhubKey, c.claudeKey].filter(Boolean).length;
+}
+
+function updateApiSummary() {
+  const c = state.cfg || {};
+  const parts = [];
+  if (c.workerUrl)  parts.push('Worker✓');
+  if (c.gnewsKey)   parts.push('GNews');
+  if (c.newsapiKey) parts.push('NewsAPI');
+  if (c.geminiKey)  parts.push('Gemini');
+  if (c.hunyuanKey) parts.push('混元');
+  if (c.finnhubKey) parts.push('Finnhub');
+  if (c.claudeKey)  parts.push('Claude');
+  $('endpointText').textContent  = c.workerUrl ? c.workerUrl.replace('https://', '') : (state.useDemo ? '[演示模式]' : '待配置 Worker URL');
+  $('apiSummaryText').textContent = parts.length ? parts.join(' · ') : (state.useDemo ? '演示模式' : '尚未配置');
+  $('apiConfiguredCount').textContent = `${countConfigured()} / 6`;
+}
+
+// ── Modals ────────────────────────────────────────────
+function openApiConfig() {
+  API_FIELDS.forEach(k => { const el = $(`${k}Input`); if (el) el.value = state.cfg[k] || ''; });
+  $('apiConfigDialog').showModal();
+}
+function closeApiConfig() { $('apiConfigDialog').close(); }
+function applyApiConfig() {
+  state.cfg = API_FIELDS.reduce((o, k) => { const el = $(`${k}Input`); if (el) o[k] = el.value.trim(); return o; }, {});
+  saveApiConfig(); updateApiSummary(); closeApiConfig();
+  state.useDemo = false;
+  $('demoBtn').textContent = '演示';
+  setStatus('API 配置已保存，正在启动…');
+  setTimeout(() => loadAll(), 300);
+}
+function clearApiConfig() {
+  state.cfg = {}; saveApiConfig(); updateApiSummary(); closeApiConfig();
+  setStatus('API 配置已清空', 'warn');
+}
+function openConfig() { $('refreshInput').value = state.refreshMinutes; $('configDialog').showModal(); }
+function closeConfig() { $('configDialog').close(); }
+function applyConfig() {
+  const rf = Math.max(15, Math.min(1440, Number($('refreshInput').value) || DEFAULT_REFRESH));
+  state.refreshMinutes = rf; state.countdownSeconds = rf * 60;
+  saveConfig(); closeConfig(); setStatus(`刷新间隔已设为 ${rf} 分钟`);
+}
+function resetConfig() {
+  state.refreshMinutes = DEFAULT_REFRESH; state.countdownSeconds = DEFAULT_REFRESH * 60;
+  saveConfig(); closeConfig();
+}
+
+function exportJSON() {
+  const data = {
+    meta:        { exported_at: new Date().toISOString() },
+    us_news:     normArr(state.lastSections.us),
+    china_news:  normArr(state.lastSections.cn),
+    energy_ai:   normArr(state.lastSections.eai),
+    stocks:      normArr(state.lastSections.stocks),
+    weibo:       normArr(state.lastSections.wb),
+    xiaohongshu: normArr(state.lastSections.xhs),
+  };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+  Object.assign(document.createElement('a'), { href: url, download: `signal-${Date.now()}.json` }).click();
+  URL.revokeObjectURL(url);
+}
+
+// ═══════════════════════════════════════════════════════
+// EVENTS & INIT
+// ═══════════════════════════════════════════════════════
+function bindEvents() {
+  $('refreshBtn').addEventListener('click', () => { state.useDemo = false; loadAll(); });
+  $('demoBtn').addEventListener('click', () => {
+    state.useDemo = !state.useDemo;
+    $('demoBtn').textContent = state.useDemo ? '退出演示' : '演示';
+    updateApiSummary();
+    state.useDemo ? loadDemo() : loadAll();
+  });
+  $('exportBtn').addEventListener('click', exportJSON);
+  $('apiConfigBtn').addEventListener('click', openApiConfig);
+  $('configBtn').addEventListener('click', openConfig);
+  $('closeApiConfigBtn').addEventListener('click', closeApiConfig);
+  $('saveApiConfigBtn').addEventListener('click', applyApiConfig);
+  $('clearApiConfigBtn').addEventListener('click', clearApiConfig);
+  $('closeConfigBtn').addEventListener('click', closeConfig);
+  $('saveConfigBtn').addEventListener('click', applyConfig);
+  $('resetConfigBtn').addEventListener('click', resetConfig);
+  document.querySelectorAll('dialog').forEach(d => {
+    d.addEventListener('click', e => { if (e.target === d) d.close(); });
+  });
+}
+
+function init() {
+  loadConfig();
+  loadApiConfig();
+  updateApiSummary();
+  bindEvents();
+  initTicker();
+  startClock();
+  startTimer();
+
+  $('body-us').innerHTML     = skelCards(5);
+  $('body-cn').innerHTML     = skelCards(5);
+  $('body-eai').innerHTML    = skelCards(6);
+  $('body-stocks').innerHTML = skelStocks();
+  $('body-weibo').innerHTML  = skelTrend(6);
+  $('body-xhs').innerHTML    = skelTrend(6);
+
+  if (!state.cfg.workerUrl) {
+    loadDemo();
+  } else {
+    loadAll();
+  }
+}
+
+init();
+
+</script>
+</body>
+</html>
