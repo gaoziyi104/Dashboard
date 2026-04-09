@@ -817,8 +817,8 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
     </div>
     <div class="fld"><label>混元自定义 Endpoint（代理/留空用官方地址）</label><input id="hunyuanEndpointInput" placeholder="https://api.hunyuan.cloud.tencent.com/v1/chat/completions"/></div>
 
-    <div class="mdl-sec">📈 Finnhub · 实时股市指数</div>
-    <div class="fld"><label class="req">Finnhub API Key</label><input id="finnhubKeyInput" type="password" placeholder="finnhub.io token"/></div>
+    <div class="mdl-sec">📈 股市指数 · Yahoo Finance（免费，无需 API Key）</div>
+    <div style="font-family:var(--fu);font-size:9px;letter-spacing:1px;color:var(--eai);padding:4px 0 2px;">✓ 自动通过 Worker 代理获取，支持标普、纳斯达克、道琼斯、上证、深证、恒生</div>
 
     <div class="mdl-sec">✨ Claude · 最终整合去重排序</div>
     <div class="mdl-g2">
@@ -851,13 +851,14 @@ const STORAGE_KEY     = 'signal_v3_config';
 const API_KEY_STORAGE = 'signal_v3_apikeys';
 const COOLDOWN_MS     = 15000;
 
-const FINNHUB_INDICES = [
-  { name:'标普500',   symbol:'^GSPC',      display:'SPX'        },
-  { name:'纳斯达克',  symbol:'^IXIC',      display:'IXIC'       },
-  { name:'道琼斯',    symbol:'^DJI',       display:'DJI'        },
-  { name:'上证综指',  symbol:'SSE:000001', display:'000001.SS'  },
-  { name:'深证成指',  symbol:'SZSE:399001',display:'399001.SZ'  },
-  { name:'恒生指数',  symbol:'HKEX:HSI',   display:'HSI'        },
+// Yahoo Finance symbols — 免费，无需 API Key，支持全球指数
+const STOCK_INDICES = [
+  { name:'标普500',  yahoo:'^GSPC',      display:'SPX'       },
+  { name:'纳斯达克', yahoo:'^IXIC',      display:'IXIC'      },
+  { name:'道琼斯',   yahoo:'^DJI',       display:'DJI'       },
+  { name:'上证综指', yahoo:'000001.SS',  display:'000001.SS' },
+  { name:'深证成指', yahoo:'399001.SZ',  display:'399001.SZ' },
+  { name:'恒生指数', yahoo:'^HSI',       display:'HSI'       },
 ];
 
 const API_FIELDS = [
@@ -865,7 +866,6 @@ const API_FIELDS = [
   'gnewsKey','newsapiKey',
   'geminiKey','geminiModel',
   'hunyuanKey','hunyuanModel','hunyuanEndpoint',
-  'finnhubKey',
   'claudeKey','claudeModel',
   'weiboCrawler','xhsCrawler',
   'apiNote',
@@ -1008,9 +1008,9 @@ async function hunyuanFetch(messages) {
   return d.text || '';
 }
 
-// ── Finnhub ────────────────────────────────────────────
-async function finnhubBatch() {
-  const d = await wPost('/api/finnhub', { symbols: FINNHUB_INDICES, key: state.cfg.finnhubKey });
+// ── Stocks via Yahoo Finance (通过 Worker 代理，无需 API Key) ──
+async function stocksBatch() {
+  const d = await wPost('/api/stocks', { symbols: STOCK_INDICES });
   return normArr(d.quotes);
 }
 
@@ -1186,11 +1186,10 @@ async function loadAINews() {
 }
 
 async function loadStocks() {
-  ps('stocks', 'loading', '股市 · Finnhub 报价中');
-  if (!state.cfg.finnhubKey) throw new Error('请配置 Finnhub API Key');
-  const results = await finnhubBatch();
+  ps('stocks', 'loading', '股市 · Yahoo Finance 报价中');
+  const results = await stocksBatch();
   const okCount = results.filter(r => !r.error).length;
-  ps('stocks', 'ok', `股市 · ${okCount}/6 指数`);
+  ps('stocks', okCount > 0 ? 'ok' : 'err', `股市 · ${okCount}/6 指数`);
   return results;
 }
 
@@ -1634,7 +1633,7 @@ function saveApiConfig() {
 
 function countConfigured() {
   const c = state.cfg || {};
-  return [c.workerUrl, c.gnewsKey||c.newsapiKey, c.geminiKey, c.hunyuanKey, c.finnhubKey, c.claudeKey].filter(Boolean).length;
+  return [c.workerUrl, c.gnewsKey||c.newsapiKey, c.geminiKey, c.hunyuanKey, c.claudeKey].filter(Boolean).length;
 }
 
 function updateApiSummary() {
@@ -1645,11 +1644,10 @@ function updateApiSummary() {
   if (c.newsapiKey) parts.push('NewsAPI');
   if (c.geminiKey)  parts.push('Gemini');
   if (c.hunyuanKey) parts.push('混元');
-  if (c.finnhubKey) parts.push('Finnhub');
   if (c.claudeKey)  parts.push('Claude');
   $('endpointText').textContent  = c.workerUrl ? c.workerUrl.replace('https://', '') : (state.useDemo ? '[演示模式]' : '待配置 Worker URL');
   $('apiSummaryText').textContent = parts.length ? parts.join(' · ') : (state.useDemo ? '演示模式' : '尚未配置');
-  $('apiConfiguredCount').textContent = `${countConfigured()} / 6`;
+  $('apiConfiguredCount').textContent = `${countConfigured()} / 5`;
 }
 
 // ── Modals ────────────────────────────────────────────
