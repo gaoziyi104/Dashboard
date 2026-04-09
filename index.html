@@ -33,6 +33,8 @@ html{scroll-behavior:smooth;}
   --xhs:    #f72b5a;
   --mkt:    #3d84f5;
   --health: #9b72f0;
+  --energy: #f5a623;
+  --ai:     #00c896;
   --up:     #00c896;
   --dn:     #e8392a;
   --fd: 'Bebas Neue','Arial Narrow',sans-serif;
@@ -558,6 +560,29 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
   .stock-grid,.skel-stock-grid{grid-template-columns:1fr;}
   .tb-actions .btn:not(.primary){display:none;}
 }
+
+/* ── FULL-WIDTH SECTION ─────────────────────── */
+.full-section{
+  margin-bottom:40px;
+}
+.news-grid-full{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
+  gap:1px;
+  background:var(--smoke);
+  border:1px solid var(--ash);
+}
+.news-grid-full .news-item{background:var(--ink);}
+.news-grid-full .news-item:hover{background:var(--paper);}
+
+/* Summary: allow full 200-char display */
+.ni-sum{
+  font-size:12px;font-weight:300;color:var(--mist);
+  line-height:1.85;
+  display:-webkit-box;
+  -webkit-box-orient:vertical;
+  overflow:hidden;
+}
 </style>
 </head>
 <body>
@@ -613,7 +638,8 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
 <div class="pipeline-bar">
   <div class="ps" id="ps-us"><div class="ps-dot"></div><span id="ps-us-text">美国新闻</span></div>
   <div class="ps" id="ps-cn"><div class="ps-dot"></div><span id="ps-cn-text">中国新闻</span></div>
-  <div class="ps" id="ps-eai"><div class="ps-dot"></div><span id="ps-eai-text">能源AI</span></div>
+  <div class="ps" id="ps-energy"><div class="ps-dot"></div><span id="ps-energy-text">能源</span></div>
+  <div class="ps" id="ps-ai"><div class="ps-dot"></div><span id="ps-ai-text">AI科技</span></div>
   <div class="ps" id="ps-stocks"><div class="ps-dot"></div><span id="ps-stocks-text">股市</span></div>
   <div class="ps" id="ps-wb"><div class="ps-dot"></div><span id="ps-wb-text">微博</span></div>
   <div class="ps" id="ps-xhs"><div class="ps-dot"></div><span id="ps-xhs-text">小红书</span></div>
@@ -623,53 +649,67 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
 <!-- ══════════════════ CONTENT ═════════════════ -->
 <main class="wrap content">
 
-  <!-- ── ROW 1: US + CHINA NEWS ─────────────── -->
-  <div class="panel-row">
-    <!-- 01 美国新闻 -->
-    <div class="panel">
-      <div class="sec-hd">
-        <div class="sec-num">01</div>
-        <div class="sec-info">
-          <div class="sec-eye" style="color:var(--us)">🇺🇸 United States · AP · CNN · ABC · Reuters</div>
-          <div class="sec-title">美国新闻</div>
-        </div>
-        <div class="sec-cnt" id="count-us">—</div>
+  <!-- ── 01 美国新闻 (full width) ─────────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
+      <div class="sec-num">01</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--us)">🇺🇸 United States · AP · CNN · ABC · Reuters · WSJ</div>
+        <div class="sec-title">美国新闻</div>
       </div>
-      <div id="body-us" class="news-list"></div>
+      <div class="sec-cnt" id="count-us">—</div>
     </div>
-    <!-- 02 中国新闻 -->
-    <div class="panel">
-      <div class="sec-hd">
-        <div class="sec-num">02</div>
-        <div class="sec-info">
-          <div class="sec-eye" style="color:var(--cn)">🇨🇳 China · 新华社 · 人民日报 · 央视</div>
-          <div class="sec-title">中国新闻</div>
-        </div>
-        <div class="sec-cnt" id="count-cn">—</div>
-      </div>
-      <div id="body-cn" class="news-list"></div>
-    </div>
+    <div class="sec-rule"></div>
+    <div id="body-us" class="news-grid-full"></div>
   </div>
 
-  <!-- ── ROW 2: ENERGY & AI ─────────────────── -->
-  <div class="eai-wrap">
-    <div class="sec-hd" style="padding:20px 20px 12px;">
+  <!-- ── 02 中国新闻 (full width) ─────────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
+      <div class="sec-num">02</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--cn)">🇨🇳 China · 新华社 · 人民日报 · 央视新闻</div>
+        <div class="sec-title">中国新闻</div>
+      </div>
+      <div class="sec-cnt" id="count-cn">—</div>
+    </div>
+    <div class="sec-rule"></div>
+    <div id="body-cn" class="news-grid-full"></div>
+  </div>
+
+  <!-- ── 03 能源 (full width) ──────────────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
       <div class="sec-num">03</div>
       <div class="sec-info">
-        <div class="sec-eye" style="color:var(--eai)">⚡ Energy · AI · Technology · Global Trends</div>
-        <div class="sec-title">能源 &amp; AI 科技</div>
+        <div class="sec-eye" style="color:var(--energy)">⚡ Energy · Renewable · Nuclear · Power · Grid</div>
+        <div class="sec-title">能源</div>
       </div>
-      <div class="sec-cnt" id="count-eai">—</div>
+      <div class="sec-cnt" id="count-energy">—</div>
     </div>
-    <div id="body-eai" class="eai-inner"></div>
+    <div class="sec-rule"></div>
+    <div id="body-energy" class="news-grid-full"></div>
   </div>
 
-  <!-- ── ROW 3: WEIBO + XHS ─────────────────── -->
-  <div class="panel-row">
-    <!-- 04 微博热搜 -->
+  <!-- ── 04 AI 科技 (full width) ───────────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
+      <div class="sec-num">04</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--ai)">🤖 AI · Technology · Models · Chips · Robotics</div>
+        <div class="sec-title">AI 科技</div>
+      </div>
+      <div class="sec-cnt" id="count-ai">—</div>
+    </div>
+    <div class="sec-rule"></div>
+    <div id="body-ai" class="news-grid-full"></div>
+  </div>
+
+  <!-- ── 05+06 微博 + 小红书 (side by side) ─────── -->
+  <div class="panel-row" style="margin-top:0">
     <div class="panel">
       <div class="sec-hd">
-        <div class="sec-num">04</div>
+        <div class="sec-num">05</div>
         <div class="sec-info">
           <div class="sec-eye" style="color:var(--wb)">🔥 Weibo Hot Search · 微博热搜榜</div>
           <div class="sec-title">微博热搜</div>
@@ -678,10 +718,9 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
       </div>
       <div id="body-weibo" class="trend-list"></div>
     </div>
-    <!-- 05 小红书 -->
     <div class="panel">
       <div class="sec-hd">
-        <div class="sec-num">05</div>
+        <div class="sec-num">06</div>
         <div class="sec-info">
           <div class="sec-eye" style="color:var(--xhs)">📕 Xiaohongshu Trending · 小红书热榜</div>
           <div class="sec-title">小红书热点</div>
@@ -692,16 +731,17 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
     </div>
   </div>
 
-  <!-- ── ROW 4: STOCKS ──────────────────────── -->
+  <!-- ── 07 股市指数 ────────────────────────────── -->
   <div class="stock-wrap">
-    <div class="sec-hd" style="padding:20px 20px 12px;">
-      <div class="sec-num">06</div>
+    <div class="sec-hd" style="padding:20px 0 12px;">
+      <div class="sec-num">07</div>
       <div class="sec-info">
         <div class="sec-eye" style="color:var(--mkt)">📈 Markets · Indices · Real-Time via Finnhub</div>
         <div class="sec-title">股市指数</div>
       </div>
       <div class="sec-cnt" id="count-stocks">—</div>
     </div>
+    <div class="sec-rule"></div>
     <div id="body-stocks"></div>
   </div>
 
@@ -992,31 +1032,56 @@ async function crawlerFetch(type) {
 // ═══════════════════════════════════════════════════════
 // SECTION LOADERS
 // ═══════════════════════════════════════════════════════
+// ── Quiet hours check: 22:00 – 06:00 no auto-refresh ──
+function isQuietHours() {
+  const h = new Date().getHours();
+  return h >= 22 || h < 6;
+}
+
 async function loadUSNews() {
-  ps('us', 'loading', '美国新闻 · 抓取中');
-  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey)
-    throw new Error('请配置 GNews 或 NewsAPI Key');
+  // NewsAPI 专责美国新闻：有 AP/CNN/ABC/Reuters/WSJ source 过滤，质量更高
+  // 每次刷新只消耗 NewsAPI 1次，节省 GNews 额度
+  ps('us', 'loading', '美国新闻 · NewsAPI 抓取中');
+  if (!state.cfg.newsapiKey && !state.cfg.gnewsKey)
+    throw new Error('请配置 NewsAPI 或 GNews Key');
 
   let articles = [];
-  try {
-    articles = await gnewsFetch('United States breaking news politics economy', 'en', 10);
-  } catch {
-    articles = await newsapiFetch('', 'associated-press,abc-news,cnn,reuters');
+  if (state.cfg.newsapiKey) {
+    // NewsAPI 主力：精准筛选权威美国媒体
+    const r = await Promise.allSettled([
+      newsapiFetch('', 'associated-press,abc-news,cnn,reuters,the-wall-street-journal'),
+      newsapiFetch('US politics economy White House', null),
+    ]);
+    const seen = new Set();
+    for (const res of r) {
+      if (res.status === 'fulfilled') for (const a of res.value)
+        if (a.title && !seen.has(a.title)) { seen.add(a.title); articles.push(a); }
+    }
+  } else {
+    // GNews 备用（仅当没有 NewsAPI 时才用，保护 GNews 额度）
+    const r = await Promise.allSettled([
+      gnewsFetch('US politics breaking news economy', 'en', 10),
+      gnewsFetch('United States White House Congress today', 'en', 10),
+    ]);
+    const seen = new Set();
+    for (const res of r) {
+      if (res.status === 'fulfilled') for (const a of res.value)
+        if (a.title && !seen.has(a.title)) { seen.add(a.title); articles.push(a); }
+    }
   }
 
-  ps('us', 'loading', '美国新闻 · Gemini 整合中');
+  ps('us', 'loading', `美国新闻 · Gemini 整合 ${articles.length} 篇`);
   if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
-
-  const articleText = articles.slice(0, 10).map((a, i) =>
-    `${i + 1}. Title: ${a.title || ''}\nDesc: ${a.description || ''}\nSource: ${a.source?.name || a.source || 'AP'}`
+  const articleText = articles.slice(0, 15).map((a, i) =>
+    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`
   ).join('\n\n');
-
-  const txt = await geminiFetch(`请将以下英文新闻整理为中文摘要。今天是${new Date().toLocaleDateString('zh-CN')}。
-返回纯JSON数组，无代码块，每条格式：{"title":"中文标题(20字内)","summary":"2句摘要(80字内)","tag":"分类词","source":"媒体名"}
-英文原文：\n${articleText}`);
-
+  const txt = await geminiFetch(
+    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
+    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
+    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"分类词","source":"媒体名"}\n原文：\n${articleText}`
+  );
   const result = extractJSONArray(txt);
-  if (!result?.length) throw new Error('Gemini 返回格式异常，请重试');
+  if (!result?.length) throw new Error('Gemini 返回格式异常');
   result.forEach((item, i) => {
     if (articles[i]?.url)         item.url         = articles[i].url;
     if (articles[i]?.publishedAt) item.published_at = articles[i].publishedAt;
@@ -1028,47 +1093,95 @@ async function loadUSNews() {
 async function loadCNNews() {
   ps('cn', 'loading', '中国新闻 · 混元搜索中');
   if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
-
   const txt = await hunyuanFetch([{ role: 'user', content:
-    `今天是${new Date().toLocaleDateString('zh-CN')}。请搜索今日中国最重要的10条新闻热点，来源优先选择新华社、人民日报、央视新闻。
-返回纯JSON数组，无代码块，每条格式：{"title":"标题(20字内)","summary":"2句摘要(80字内)","tag":"分类词","source":"媒体名"}`
-  }]);
+    `今天是${new Date().toLocaleDateString('zh-CN')}。请搜索今日中国最重要的10条新闻热点，来源优先选择新华社、人民日报、央视新闻。标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"分类词","source":"媒体名"}`  }]);
   const result = extractJSONArray(txt);
-  if (!result?.length) throw new Error('混元返回格式异常，请重试');
+  if (!result?.length) throw new Error('混元返回格式异常');
   ps('cn', 'ok', `中国新闻 · ${result.length} 条`);
   return result;
 }
 
-async function loadEAINews() {
-  ps('eai', 'loading', '能源AI · 抓取中');
-  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey)
-    throw new Error('请配置 GNews 或 NewsAPI Key');
+async function loadEnergyNews() {
+  // GNews 专责能源：2次查询，覆盖可再生、核能、油气等
+  ps('energy', 'loading', '能源 · GNews 专项抓取中');
+  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey) throw new Error('请配置 GNews 或 NewsAPI Key');
 
   let articles = [];
-  try {
-    articles = await gnewsFetch('artificial intelligence energy renewable AI technology', 'en', 10);
-  } catch {
-    articles = await newsapiFetch('AI energy technology', null);
+  if (state.cfg.gnewsKey) {
+    // GNews 主力：能源专项，每次消耗 GNews 2次
+    const r = await Promise.allSettled([
+      gnewsFetch('energy renewable solar wind nuclear power electricity grid', 'en', 10),
+      gnewsFetch('oil gas coal clean energy EV battery storage climate', 'en', 10),
+    ]);
+    const seen = new Set();
+    for (const res of r) {
+      if (res.status === 'fulfilled') for (const a of res.value)
+        if (a.title && !seen.has(a.title)) { seen.add(a.title); articles.push(a); }
+    }
+  } else {
+    // NewsAPI 备用
+    articles = await newsapiFetch('energy renewable nuclear power climate', null);
   }
 
-  ps('eai', 'loading', '能源AI · Gemini 整合中');
+  ps('energy', 'loading', `能源 · Gemini 整合 ${articles.length} 篇`);
   if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
-
-  const articleText = articles.slice(0, 10).map((a, i) =>
-    `${i + 1}. Title: ${a.title || ''}\nDesc: ${a.description || ''}\nSource: ${a.source?.name || a.source || ''}`
+  const articleText = articles.slice(0, 15).map((a, i) =>
+    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
-
-  const txt = await geminiFetch(`请将以下英文能源/AI科技新闻整理为中文。今天是${new Date().toLocaleDateString('zh-CN')}。
-返回纯JSON数组，无代码块，每条格式：{"title":"中文标题(20字内)","summary":"2句摘要(80字内)","tag":"能源 or AI","source":"媒体名"}
-英文原文：\n${articleText}`);
-
+  const txt = await geminiFetch(
+    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文能源新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
+    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
+    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"能源","source":"媒体名"}\n原文：\n${articleText}`
+  );
   const result = extractJSONArray(txt);
-  if (!result?.length) throw new Error('Gemini 返回格式异常，请重试');
+  if (!result?.length) throw new Error('Gemini 返回格式异常');
   result.forEach((item, i) => {
     if (articles[i]?.url)         item.url         = articles[i].url;
     if (articles[i]?.publishedAt) item.published_at = articles[i].publishedAt;
   });
-  ps('eai', 'ok', `能源AI · ${result.length} 条`);
+  ps('energy', 'ok', `能源 · ${result.length} 条`);
+  return result;
+}
+
+async function loadAINews() {
+  // GNews 专责 AI科技：2次查询，覆盖大模型、芯片、机器人等
+  ps('ai', 'loading', 'AI科技 · GNews 专项抓取中');
+  if (!state.cfg.gnewsKey && !state.cfg.newsapiKey) throw new Error('请配置 GNews 或 NewsAPI Key');
+
+  let articles = [];
+  if (state.cfg.gnewsKey) {
+    // GNews 主力：AI 专项，每次消耗 GNews 2次
+    const r = await Promise.allSettled([
+      gnewsFetch('artificial intelligence AI model ChatGPT Claude Gemini OpenAI Anthropic', 'en', 10),
+      gnewsFetch('AI chip semiconductor robot technology breakthrough LLM', 'en', 10),
+    ]);
+    const seen = new Set();
+    for (const res of r) {
+      if (res.status === 'fulfilled') for (const a of res.value)
+        if (a.title && !seen.has(a.title)) { seen.add(a.title); articles.push(a); }
+    }
+  } else {
+    // NewsAPI 备用
+    articles = await newsapiFetch('artificial intelligence AI technology chip', null);
+  }
+
+  ps('ai', 'loading', `AI科技 · Gemini 整合 ${articles.length} 篇`);
+  if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
+  const articleText = articles.slice(0, 15).map((a, i) =>
+    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
+  ).join('\n\n');
+  const txt = await geminiFetch(
+    `今天是${new Date().toLocaleDateString('zh-CN')}。从以下英文AI/科技新闻挑选最重要10条整理为中文。必须返回10条（不足则全部返回）。` +
+    `标题：20字内，只用名词和动词，不用感叹号、形容词、夸张语。摘要：200字，专业新闻写作风格，只陈述客观事实（含关键数据、机构名、时间节点），不使用修饰性词语，第三人称叙述。` +
+    `返回纯JSON数组，无代码块，每条：{"title":"中文标题","summary":"200字摘要","tag":"AI","source":"媒体名"}\n原文：\n${articleText}`
+  );
+  const result = extractJSONArray(txt);
+  if (!result?.length) throw new Error('Gemini 返回格式异常');
+  result.forEach((item, i) => {
+    if (articles[i]?.url)         item.url         = articles[i].url;
+    if (articles[i]?.publishedAt) item.published_at = articles[i].publishedAt;
+  });
+  ps('ai', 'ok', `AI科技 · ${result.length} 条`);
   return result;
 }
 
@@ -1111,14 +1224,15 @@ async function claudeIntegrate(sections) {
   const payload = JSON.stringify({
     us_news:     (sections.us     || []).slice(0, 12),
     china_news:  (sections.cn     || []).slice(0, 12),
-    energy_ai:   (sections.eai    || []).slice(0, 12),
+    energy_news: (sections.energy || []).slice(0, 12),
+    ai_news:     (sections.ai     || []).slice(0, 12),
     weibo:       (sections.wb     || []).slice(0, 10),
     xiaohongshu: (sections.xhs    || []).slice(0, 10),
     stocks:      (sections.stocks || []),
   }, null, 0);
 
   const txt = await claudeCall(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。对以下各板块数据：1)去重(含义相近只留一条) 2)确认格式含title/summary/tag/source 3)按重要性排序最多10条 4)weibo/xiaohongshu/stocks保持原样。返回纯JSON对象，键名不变。\n输入：${payload}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。对以下各板块数据完成：1)去重（标题含义相近只留一条）2)检查每条summary是否约200字专业新闻风格（只陈述事实和数据，无形容词修饰语），不足的补充完整3)按重要性排序最多10条4)weibo/xiaohongshu/stocks保持原样返回纯JSON对象，键名不变。\n输入：${payload}`
   );
   return extractJSONObject(txt);
 }
@@ -1135,10 +1249,11 @@ async function loadAll() {
   $('refreshBtn').textContent = '↻ 加载中';
   setStatus('管线启动中…');
 
-  ['us','cn','eai','stocks','wb','xhs','claude'].forEach(id => ps(id, '', '--'));
+  ['us','cn','energy','ai','stocks','wb','xhs','claude'].forEach(id => ps(id, '', '--'));
   $('body-us').innerHTML     = skelCards(5);
   $('body-cn').innerHTML     = skelCards(5);
-  $('body-eai').innerHTML    = skelCards(6);
+  $('body-energy').innerHTML = skelCards(5);
+  $('body-ai').innerHTML     = skelCards(5);
   $('body-stocks').innerHTML = skelStocks();
   $('body-weibo').innerHTML  = skelTrend(6);
   $('body-xhs').innerHTML    = skelTrend(6);
@@ -1147,12 +1262,13 @@ async function loadAll() {
   const healthItems = [];
 
   const phases = [
-    { key:'us',     fn: loadUSNews,  bodyId:'body-us',     render: d => renderNews(d,'var(--us)'),   cnt:'count-us'     },
-    { key:'cn',     fn: loadCNNews,  bodyId:'body-cn',     render: d => renderNews(d,'var(--cn)'),   cnt:'count-cn'     },
-    { key:'eai',    fn: loadEAINews, bodyId:'body-eai',    render: d => renderNews(d,'var(--eai)'),  cnt:'count-eai'    },
-    { key:'stocks', fn: loadStocks,  bodyId:'body-stocks', render: d => renderStocks(d),             cnt:'count-stocks' },
-    { key:'wb',     fn: loadWeibo,   bodyId:'body-weibo',  render: d => renderTrend(d,'var(--wb)'),  cnt:'count-weibo'  },
-    { key:'xhs',    fn: loadXHS,     bodyId:'body-xhs',    render: d => renderTrend(d,'var(--xhs)'), cnt:'count-xhs'    },
+    { key:'us',     fn: loadUSNews,     bodyId:'body-us',     render: d => renderNews(d,'var(--us)'),     cnt:'count-us'     },
+    { key:'cn',     fn: loadCNNews,     bodyId:'body-cn',     render: d => renderNews(d,'var(--cn)'),     cnt:'count-cn'     },
+    { key:'energy', fn: loadEnergyNews, bodyId:'body-energy', render: d => renderNews(d,'var(--energy)'), cnt:'count-energy' },
+    { key:'ai',     fn: loadAINews,     bodyId:'body-ai',     render: d => renderNews(d,'var(--ai)'),     cnt:'count-ai'     },
+    { key:'stocks', fn: loadStocks,     bodyId:'body-stocks', render: d => renderStocks(d),               cnt:'count-stocks' },
+    { key:'wb',     fn: loadWeibo,      bodyId:'body-weibo',  render: d => renderTrend(d,'var(--wb)'),   cnt:'count-weibo'  },
+    { key:'xhs',    fn: loadXHS,        bodyId:'body-xhs',    render: d => renderTrend(d,'var(--xhs)'),  cnt:'count-xhs'    },
   ];
 
   for (const ph of phases) {
@@ -1178,7 +1294,7 @@ async function loadAll() {
   }
 
   // Claude integration (optional)
-  if (state.cfg.claudeKey && (sections.us || sections.cn || sections.eai)) {
+  if (state.cfg.claudeKey && (sections.us || sections.cn || sections.energy || sections.ai)) {
     ps('claude', 'loading', 'Claude · 整合去重中');
     try {
       setStatus('Claude 最终整合中…');
@@ -1238,11 +1354,17 @@ const DEMO = {
     { title:'国产大模型追平GPT-4级别', summary:'国内多家厂商密集发布升级版本，代码生成和数学推理维度显著提升。', tag:'AI', source:'央视新闻' },
     { title:'"白名单"房企融资协调机制推进', summary:'政策性银行已就多个项目发放贷款，旨在保障交楼和改善房企现金流。', tag:'房地产', source:'新华社' },
   ],
-  eai: [
-    { title:'谷歌发布Gemini 2.5 Pro', summary:'多模态推理能力大幅提升，支持百万Token上下文，多项基准刷新记录。', tag:'AI', source:'Google Blog' },
-    { title:'新能源车出口超10万辆创历史新高', summary:'比亚迪吉利奇瑞出口同比涨超50%，欧洲东南亚成主要增量市场。', tag:'能源', source:'Reuters' },
-    { title:'美国对AI数据中心扩建开绿色通道', summary:'白宫行政令要求30天内完成选址审批，并豁免部分环境评估要求。', tag:'AI', source:'AP News' },
+  energy: [
     { title:'IEA：2025年清洁能源投资首超化石燃料', summary:'可再生能源、电动汽车及电网投资合计1.7万亿美元，超过油气煤炭总和。', tag:'能源', source:'IEA' },
+    { title:'新能源车出口超10万辆创历史新高', summary:'比亚迪吉利奇瑞出口同比涨超50%，欧洲东南亚成主要增量市场。', tag:'能源', source:'Reuters' },
+    { title:'美国核能项目重启加速，多州签署新建协议', summary:'联邦政府宣布简化核电审批流程，多家电力公司宣布新建核电机组计划。', tag:'能源', source:'AP News' },
+    { title:'欧洲电网储能容量创历史新高', summary:'锂电储能装机规模同比增长80%，助力平抑可再生能源波动性。', tag:'能源', source:'Reuters' },
+  ],
+  ai: [
+    { title:'谷歌发布Gemini 2.5 Pro', summary:'多模态推理能力大幅提升，支持百万Token上下文，多项基准刷新记录。', tag:'AI', source:'Google Blog' },
+    { title:'美国对AI数据中心扩建开绿色通道', summary:'白宫行政令要求30天内完成选址审批，并豁免部分环境评估要求。', tag:'AI', source:'AP News' },
+    { title:'Anthropic发布Claude 3.7，推理能力大幅提升', summary:'新版本在数学、代码生成和长文档分析等任务上取得突破性进展。', tag:'AI', source:'Anthropic Blog' },
+    { title:'英伟达Blackwell芯片出货量超预期', summary:'数据中心AI训练需求强劲，英伟达Q1营收创历史新高。', tag:'AI', source:'Reuters' },
   ],
   weibo: [
     { rank:1, title:'某知名演员宣布结婚', summary:'婚讯发布后阅读量三小时破亿，相关话题占据热搜前三。', tag:'热搜', source:'微博热搜' },
@@ -1266,21 +1388,24 @@ const DEMO = {
     { name:'恒生指数', symbol:'HSI',         value:'18,443.02', change:'+210.5', pct:'+1.15%', up:true  },
   ],
   health: [
-    { name:'GNews → 美国新闻原文',      status:'ok',   detail:'演示数据' },
-    { name:'Gemini → 美国新闻整合',     status:'ok',   detail:'演示数据' },
-    { name:'混元 → 中国新闻',          status:'ok',   detail:'演示数据' },
-    { name:'Finnhub → 股市指数',       status:'ok',   detail:'演示数据' },
-    { name:'Claude → 最终整合',        status:'ok',   detail:'演示数据' },
+    { name:'GNews/NewsAPI → 美国新闻',  status:'ok',   detail:'演示数据' },
+    { name:'GNews → 能源新闻',          status:'ok',   detail:'演示数据' },
+    { name:'GNews → AI科技新闻',        status:'ok',   detail:'演示数据' },
+    { name:'Gemini → 整合翻译',         status:'ok',   detail:'演示数据' },
+    { name:'混元 → 中国新闻',           status:'ok',   detail:'演示数据' },
+    { name:'Finnhub → 股市指数',        status:'ok',   detail:'演示数据' },
+    { name:'Claude → 最终整合',         status:'ok',   detail:'演示数据' },
     { name:'微博爬虫',                  status:'warn', detail:'爬虫未配置，演示占位' },
     { name:'小红书爬虫',                status:'warn', detail:'爬虫未配置，演示占位' },
   ],
 };
 
 async function loadDemo() {
-  ['us','cn','eai','stocks','wb','xhs','claude'].forEach(id => ps(id, 'ok', `${id} · 演示`));
+  ['us','cn','energy','ai','stocks','wb','xhs','claude'].forEach(id => ps(id, 'ok', `${id} · 演示`));
   $('body-us').innerHTML     = renderNews(DEMO.us,    'var(--us)');
   $('body-cn').innerHTML     = renderNews(DEMO.cn,    'var(--cn)');
-  $('body-eai').innerHTML    = renderNews(DEMO.eai,   'var(--eai)');
+  $('body-energy').innerHTML = renderNews(DEMO.energy, 'var(--energy)');
+  $('body-ai').innerHTML     = renderNews(DEMO.ai,     'var(--ai)');
   $('body-weibo').innerHTML  = renderTrend(DEMO.weibo,'var(--wb)');
   $('body-xhs').innerHTML    = renderTrend(DEMO.xhs,  'var(--xhs)');
   $('body-stocks').innerHTML = renderStocks(DEMO.stocks);
@@ -1288,7 +1413,8 @@ async function loadDemo() {
 
   $('count-us').textContent     = DEMO.us.length;
   $('count-cn').textContent     = DEMO.cn.length;
-  $('count-eai').textContent    = DEMO.eai.length;
+  $('count-energy').textContent = DEMO.energy.length;
+  $('count-ai').textContent     = DEMO.ai.length;
   $('count-weibo').textContent  = DEMO.weibo.length;
   $('count-xhs').textContent    = DEMO.xhs.length;
   $('count-stocks').textContent = DEMO.stocks.length;
@@ -1321,6 +1447,9 @@ function renderNews(items, accentVar) {
     </article>`;
   }).join('')}</div>`;
 }
+
+// Alias used by full-section grid — same render, grid container is in HTML
+const renderNewsGrid = renderNews;
 
 function renderTrend(items, accentVar) {
   if (!items?.length) return `<div class="empty">暂无数据</div>`;
@@ -1469,7 +1598,11 @@ function startTimer() {
     state.countdownSeconds--;
     if (state.countdownSeconds <= 0) {
       state.countdownSeconds = state.refreshMinutes * 60;
-      if (!state.useDemo) loadAll();
+      if (!state.useDemo && !isQuietHours()) {
+        loadAll();
+      } else if (isQuietHours()) {
+        setStatus('夜间静默中 (22:00–06:00)，暂停自动刷新');
+      }
     }
     const mm = String(Math.floor(state.countdownSeconds / 60)).padStart(2, '0');
     const ss = String(state.countdownSeconds % 60).padStart(2, '0');
@@ -1602,6 +1735,8 @@ function init() {
   $('body-cn').innerHTML     = skelCards(5);
   $('body-eai').innerHTML    = skelCards(6);
   $('body-stocks').innerHTML = skelStocks();
+  $('body-energy').innerHTML = skelCards(5);
+  $('body-ai').innerHTML     = skelCards(5);
   $('body-weibo').innerHTML  = skelTrend(6);
   $('body-xhs').innerHTML    = skelTrend(6);
 
