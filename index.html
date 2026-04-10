@@ -826,10 +826,30 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
       <div class="fld"><label>Claude 模型</label><input id="claudeModelInput" placeholder="claude-sonnet-4-20250514"/></div>
     </div>
 
-    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 服务端爬虫</div>
+    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 服务端爬虫配置</div>
+    <div style="font-family:var(--fu);font-size:8px;letter-spacing:1px;color:var(--mist);padding:2px 0 6px;line-height:1.7;">
+      爬虫地址需返回 JSON 格式数据。微博格式：<code style="color:var(--mkt);font-size:9px">[{"rank":1,"title":"...","summary":"...","source":"微博热搜"}]</code><br>
+      小红书格式：<code style="color:var(--xhs);font-size:9px">[{"rank":1,"title":"...","summary":"...","tag":"种草","source":"小红书热榜"}]</code>
+    </div>
     <div class="mdl-g2">
-      <div class="fld"><label>微博爬虫 JSON 地址</label><input id="weiboCrawlerInput" placeholder="https://your-worker.example.com/weibo"/></div>
-      <div class="fld"><label>小红书爬虫 JSON 地址</label><input id="xhsCrawlerInput" placeholder="https://your-worker.example.com/xhs"/></div>
+      <div class="fld">
+        <label>微博爬虫 JSON 地址</label>
+        <input id="weiboCrawlerInput" placeholder="https://your-crawler.workers.dev/weibo"/>
+        <div style="font-family:var(--fu);font-size:8px;color:var(--mist);margin-top:3px;">返回热搜列表数组，支持 weibo / items / 直接数组 三种字段名</div>
+      </div>
+      <div class="fld">
+        <label>小红书爬虫 JSON 地址</label>
+        <input id="xhsCrawlerInput" placeholder="https://your-crawler.workers.dev/xhs"/>
+        <div style="font-family:var(--fu);font-size:8px;color:var(--mist);margin-top:3px;">返回热榜列表数组，支持 xiaohongshu / xhs / items / 直接数组 三种字段名</div>
+      </div>
+    </div>
+    <div class="fld" style="margin-top:4px;">
+      <label>爬虫状态测试</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <button class="btn" onclick="testCrawler('weibo')" style="font-size:8px;padding:5px 10px;">测试微博爬虫</button>
+        <button class="btn" onclick="testCrawler('xhs')" style="font-size:8px;padding:5px 10px;">测试小红书爬虫</button>
+        <span id="crawlerTestResult" style="font-family:var(--fu);font-size:9px;color:var(--mist);"></span>
+      </div>
     </div>
 
     <div class="mdl-sec">备注</div>
@@ -1079,7 +1099,7 @@ async function loadUSNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1093,10 +1113,18 @@ async function loadUSNews() {
 async function loadCNNews() {
   ps('cn', 'loading', '中国新闻 · 混元搜索中');
   if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
-  const txt = await hunyuanFetch([{ role: 'user', content:
-    `今天是${new Date().toLocaleDateString('zh-CN')}。搜索今日中国最重要的10条新闻（不足则全部），来源优先选择新华社、人民日报、央视新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词，source字段填媒体名。`  }]);
-  const result = extractJSONArray(txt);
-  if (!result?.length) throw new Error('混元返回格式异常');
+  const today = new Date().toLocaleDateString('zh-CN');
+  const prompt = `今天是${today}。搜索今日中国最重要的12条新闻（不足则全部），来源优先选择新华社、人民日报、央视新闻。` +
+    `标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。` +
+    `必须严格返回纯JSON数组，格式：[{"title":"...","summary":"...","tag":"...","source":"..."}]，不得有任何其他文字。`;
+  const d = await wPost('/api/hunyuan-news', {
+    prompt,
+    key:      state.cfg.hunyuanKey,
+    model:    state.cfg.hunyuanModel    || 'hunyuan-turbos-latest',
+    endpoint: state.cfg.hunyuanEndpoint || '',
+  });
+  const result = Array.isArray(d.items) ? d.items : null;
+  if (!result?.length) throw new Error('混元返回为空，请检查 API Key 或稍后重试');
   ps('cn', 'ok', `中国新闻 · ${result.length} 条`);
   return result;
 }
@@ -1129,7 +1157,7 @@ async function loadEnergyNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1168,7 +1196,7 @@ async function loadAINews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻，挑选最重要的10条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1215,17 +1243,17 @@ async function loadXHS() {
 
 async function claudeIntegrate(sections) {
   const payload = JSON.stringify({
-    us_news:     (sections.us     || []).slice(0, 12),
-    china_news:  (sections.cn     || []).slice(0, 12),
-    energy_news: (sections.energy || []).slice(0, 12),
-    ai_news:     (sections.ai     || []).slice(0, 12),
+    us_news:     (sections.us     || []).slice(0, 14),
+    china_news:  (sections.cn     || []).slice(0, 14),
+    energy_news: (sections.energy || []).slice(0, 14),
+    ai_news:     (sections.ai     || []).slice(0, 14),
     weibo:       (sections.wb     || []).slice(0, 10),
     xiaohongshu: (sections.xhs    || []).slice(0, 10),
     stocks:      (sections.stocks || []),
   }, null, 0);
 
   const txt = await claudeCall(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。对以下各板块数据完成：1)去重（标题含义相近只留一条）2)检查每条summary是否约200字专业新闻风格（只陈述事实和数据，无形容词修饰语），不足的补充完整3)按重要性排序最多10条4)weibo/xiaohongshu/stocks保持原样返回纯JSON对象，键名不变。\n输入：${payload}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。对以下各板块数据完成：1)去重（标题含义相近只留一条）2)检查每条summary是否约200字专业新闻风格（只陈述事实和数据，无形容词修饰语），不足的补充完整3)按重要性排序最多12条4)weibo/xiaohongshu/stocks保持原样返回纯JSON对象，键名不变。\n输入：${payload}`
   );
   return extractJSONObject(txt);
 }
@@ -1672,6 +1700,35 @@ function applyConfig() {
 function resetConfig() {
   state.refreshMinutes = DEFAULT_REFRESH; state.countdownSeconds = DEFAULT_REFRESH * 60;
   saveConfig(); closeConfig();
+}
+
+async function testCrawler(type) {
+  const urlKey = type === 'weibo' ? 'weiboCrawlerInput' : 'xhsCrawlerInput';
+  const url = $(urlKey) ? $(urlKey).value.trim() : (state.cfg[type === 'weibo' ? 'weiboCrawler' : 'xhsCrawler'] || '');
+  const resultEl = $('crawlerTestResult');
+  if (!url) {
+    if (resultEl) resultEl.textContent = `请先填写${type === 'weibo' ? '微博' : '小红书'}爬虫地址`;
+    return;
+  }
+  if (resultEl) { resultEl.style.color = 'var(--cn)'; resultEl.textContent = '测试中…'; }
+  try {
+    const base = (state.cfg.workerUrl || '').replace(/\/+$/, '');
+    if (!base) { if (resultEl) { resultEl.style.color='var(--us)'; resultEl.textContent='请先配置 Worker URL'; } return; }
+    const r = await fetch(base + `/api/${type}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+    const arr = Array.isArray(d) ? d : (d.weibo || d.xiaohongshu || d.xhs || d.items || []);
+    if (resultEl) {
+      resultEl.style.color = 'var(--eai)';
+      resultEl.textContent = `✓ 成功，返回 ${arr.length} 条数据`;
+    }
+  } catch (e) {
+    if (resultEl) { resultEl.style.color='var(--us)'; resultEl.textContent=`✗ 失败：${e.message}`; }
+  }
 }
 
 function exportJSON() {
