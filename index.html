@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>G·SIGNAL</title>
+<title>SIGNAL · 多源情报看板</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Noto+Sans+SC:wght@300;400;500&display=swap" rel="stylesheet">
@@ -592,8 +592,8 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
   <div class="tb-inner">
     <div class="tb-brand">
       <div>
-        <div class="tb-logo">G</div>
-        <div class="tb-sub">SIGNAL</div>
+        <div class="tb-logo">SIGNAL</div>
+        <div class="tb-sub">多源情报看板</div>
       </div>
     </div>
     <div class="tb-clock">
@@ -826,10 +826,20 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
       <div class="fld"><label>Claude 模型</label><input id="claudeModelInput" placeholder="claude-sonnet-4-20250514"/></div>
     </div>
 
-    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 内置热榜（无需配置）</div>
-    <div style="font-family:var(--fu);font-size:9px;letter-spacing:1px;color:var(--eai);padding:4px 0 2px;line-height:1.8;">
-      ✓ 微博热搜和小红书热榜已内置在 Worker 中，无需填写任何地址。<br>
-      数据通过免费公开聚合 API 获取，配置好 Worker URL 后刷新即可自动加载。
+    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 内置热榜</div>
+    <div style="font-family:var(--fu);font-size:9px;letter-spacing:1px;color:var(--eai);padding:3px 0 6px;line-height:1.8;">
+      ✓ Worker 已内置6个数据源自动轮询，无需配置即可使用。<br>
+      若内置源均不可用，可在下方填写自定义爬虫地址作为备用（选填）。
+    </div>
+    <div class="mdl-g2">
+      <div class="fld">
+        <label>微博自定义备用地址（选填）</label>
+        <input id="weiboCrawlerInput" placeholder="留空则使用内置多源轮询"/>
+      </div>
+      <div class="fld">
+        <label>小红书自定义备用地址（选填）</label>
+        <input id="xhsCrawlerInput" placeholder="留空则使用内置多源轮询"/>
+      </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
       <button class="btn" onclick="testBuiltinCrawler('weibo')" style="font-size:8px;padding:5px 10px;">测试微博热搜</button>
@@ -872,6 +882,7 @@ const API_FIELDS = [
   'geminiKey','geminiModel',
   'hunyuanKey','hunyuanModel','hunyuanEndpoint',
   'claudeKey','claudeModel',
+  'weiboCrawler','xhsCrawler',
   'apiNote',
 ];
 
@@ -1202,8 +1213,8 @@ async function loadStocks() {
 async function loadWeibo() {
   ps('wb', 'loading', '微博 · 热搜抓取中');
   try {
-    // 直接调用 SIGNAL Worker 内置微博路由，无需单独爬虫
-    const data = await wPost('/api/weibo', {});
+    // 直接调用 SIGNAL Worker 内置微博路由，Worker 自动多源轮询
+    const data = await wPost('/api/weibo', { customUrl: state.cfg.weiboCrawler || null });
     const items = normArr(Array.isArray(data) ? data : (data.weibo || data.items || []));
     ps('wb', 'ok', `微博 · ${items.length} 条`);
     return items.length ? items : null;
@@ -1216,8 +1227,8 @@ async function loadWeibo() {
 async function loadXHS() {
   ps('xhs', 'loading', '小红书 · 热榜抓取中');
   try {
-    // 直接调用 SIGNAL Worker 内置小红书路由，无需单独爬虫
-    const data = await wPost('/api/xhs', {});
+    // 直接调用 SIGNAL Worker 内置小红书路由，Worker 自动多源轮询
+    const data = await wPost('/api/xhs', { customUrl: state.cfg.xhsCrawler || null });
     const items = normArr(Array.isArray(data) ? data : (data.xiaohongshu || data.xhs || data.items || []));
     ps('xhs', 'ok', `小红书 · ${items.length} 条`);
     return items.length ? items : null;
