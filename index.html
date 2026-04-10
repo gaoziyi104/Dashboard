@@ -826,30 +826,15 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
       <div class="fld"><label>Claude 模型</label><input id="claudeModelInput" placeholder="claude-sonnet-4-20250514"/></div>
     </div>
 
-    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 服务端爬虫配置</div>
-    <div style="font-family:var(--fu);font-size:8px;letter-spacing:1px;color:var(--mist);padding:2px 0 6px;line-height:1.7;">
-      爬虫地址需返回 JSON 格式数据。微博格式：<code style="color:var(--mkt);font-size:9px">[{"rank":1,"title":"...","summary":"...","source":"微博热搜"}]</code><br>
-      小红书格式：<code style="color:var(--xhs);font-size:9px">[{"rank":1,"title":"...","summary":"...","tag":"种草","source":"小红书热榜"}]</code>
+    <div class="mdl-sec">🔥 微博 &amp; 小红书 · 内置热榜（无需配置）</div>
+    <div style="font-family:var(--fu);font-size:9px;letter-spacing:1px;color:var(--eai);padding:4px 0 2px;line-height:1.8;">
+      ✓ 微博热搜和小红书热榜已内置在 Worker 中，无需填写任何地址。<br>
+      数据通过免费公开聚合 API 获取，配置好 Worker URL 后刷新即可自动加载。
     </div>
-    <div class="mdl-g2">
-      <div class="fld">
-        <label>微博爬虫 JSON 地址</label>
-        <input id="weiboCrawlerInput" placeholder="https://your-crawler.workers.dev/weibo"/>
-        <div style="font-family:var(--fu);font-size:8px;color:var(--mist);margin-top:3px;">返回热搜列表数组，支持 weibo / items / 直接数组 三种字段名</div>
-      </div>
-      <div class="fld">
-        <label>小红书爬虫 JSON 地址</label>
-        <input id="xhsCrawlerInput" placeholder="https://your-crawler.workers.dev/xhs"/>
-        <div style="font-family:var(--fu);font-size:8px;color:var(--mist);margin-top:3px;">返回热榜列表数组，支持 xiaohongshu / xhs / items / 直接数组 三种字段名</div>
-      </div>
-    </div>
-    <div class="fld" style="margin-top:4px;">
-      <label>爬虫状态测试</label>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        <button class="btn" onclick="testCrawler('weibo')" style="font-size:8px;padding:5px 10px;">测试微博爬虫</button>
-        <button class="btn" onclick="testCrawler('xhs')" style="font-size:8px;padding:5px 10px;">测试小红书爬虫</button>
-        <span id="crawlerTestResult" style="font-family:var(--fu);font-size:9px;color:var(--mist);"></span>
-      </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="testBuiltinCrawler('weibo')" style="font-size:8px;padding:5px 10px;">测试微博热搜</button>
+      <button class="btn" onclick="testBuiltinCrawler('xhs')" style="font-size:8px;padding:5px 10px;">测试小红书热榜</button>
+      <span id="crawlerTestResult" style="font-family:var(--fu);font-size:9px;color:var(--mist);"></span>
     </div>
 
     <div class="mdl-sec">备注</div>
@@ -887,7 +872,6 @@ const API_FIELDS = [
   'geminiKey','geminiModel',
   'hunyuanKey','hunyuanModel','hunyuanEndpoint',
   'claudeKey','claudeModel',
-  'weiboCrawler','xhsCrawler',
   'apiNote',
 ];
 
@@ -1216,27 +1200,29 @@ async function loadStocks() {
 }
 
 async function loadWeibo() {
-  ps('wb', 'loading', '微博 · 爬虫请求中');
+  ps('wb', 'loading', '微博 · 热搜抓取中');
   try {
-    const data = await crawlerFetch('weibo');
-    const items = normArr(data.weibo || data.items || data);
+    // 直接调用 SIGNAL Worker 内置微博路由，无需单独爬虫
+    const data = await wPost('/api/weibo', {});
+    const items = normArr(Array.isArray(data) ? data : (data.weibo || data.items || []));
     ps('wb', 'ok', `微博 · ${items.length} 条`);
-    return items;
+    return items.length ? items : null;
   } catch (e) {
-    ps('wb', 'skip', '微博 · 爬虫未配置');
+    ps('wb', 'err', `微博 · ${e.message.slice(0, 20)}`);
     return null;
   }
 }
 
 async function loadXHS() {
-  ps('xhs', 'loading', '小红书 · 爬虫请求中');
+  ps('xhs', 'loading', '小红书 · 热榜抓取中');
   try {
-    const data = await crawlerFetch('xhs');
-    const items = normArr(data.xiaohongshu || data.xhs || data.items || data);
+    // 直接调用 SIGNAL Worker 内置小红书路由，无需单独爬虫
+    const data = await wPost('/api/xhs', {});
+    const items = normArr(Array.isArray(data) ? data : (data.xiaohongshu || data.xhs || data.items || []));
     ps('xhs', 'ok', `小红书 · ${items.length} 条`);
-    return items;
+    return items.length ? items : null;
   } catch (e) {
-    ps('xhs', 'skip', '小红书 · 爬虫未配置');
+    ps('xhs', 'err', `小红书 · ${e.message.slice(0, 20)}`);
     return null;
   }
 }
@@ -1702,29 +1688,24 @@ function resetConfig() {
   saveConfig(); closeConfig();
 }
 
-async function testCrawler(type) {
-  const urlKey = type === 'weibo' ? 'weiboCrawlerInput' : 'xhsCrawlerInput';
-  const url = $(urlKey) ? $(urlKey).value.trim() : (state.cfg[type === 'weibo' ? 'weiboCrawler' : 'xhsCrawler'] || '');
+async function testBuiltinCrawler(type) {
   const resultEl = $('crawlerTestResult');
-  if (!url) {
-    if (resultEl) resultEl.textContent = `请先填写${type === 'weibo' ? '微博' : '小红书'}爬虫地址`;
-    return;
-  }
-  if (resultEl) { resultEl.style.color = 'var(--cn)'; resultEl.textContent = '测试中…'; }
+  const label = type === 'weibo' ? '微博热搜' : '小红书热榜';
+  if (resultEl) { resultEl.style.color = 'var(--cn)'; resultEl.textContent = `${label} 测试中…`; }
   try {
     const base = (state.cfg.workerUrl || '').replace(/\/+$/, '');
     if (!base) { if (resultEl) { resultEl.style.color='var(--us)'; resultEl.textContent='请先配置 Worker URL'; } return; }
     const r = await fetch(base + `/api/${type}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url }),
+      body: JSON.stringify({}),
     });
     const d = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
     const arr = Array.isArray(d) ? d : (d.weibo || d.xiaohongshu || d.xhs || d.items || []);
     if (resultEl) {
-      resultEl.style.color = 'var(--eai)';
-      resultEl.textContent = `✓ 成功，返回 ${arr.length} 条数据`;
+      resultEl.style.color = arr.length ? 'var(--eai)' : 'var(--cn)';
+      resultEl.textContent = arr.length ? `✓ ${label} 成功，${arr.length} 条` : `⚠ 返回 0 条，API 可能暂时不可用`;
     }
   } catch (e) {
     if (resultEl) { resultEl.style.color='var(--us)'; resultEl.textContent=`✗ 失败：${e.message}`; }
