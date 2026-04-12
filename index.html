@@ -35,6 +35,7 @@ html{scroll-behavior:smooth;}
   --health: #9b72f0;
   --energy: #f5a623;
   --ai:     #00c896;
+  --social: #a78bfa;
   --up:     #00c896;
   --dn:     #e8392a;
   --fd: 'Bebas Neue','Arial Narrow',sans-serif;
@@ -583,6 +584,56 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
   -webkit-box-orient:vertical;
   overflow:hidden;
 }
+
+/* ── SOCIAL HEATMAP ─────────────────────────────── */
+.heatmap-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  gap:8px;
+  padding:4px 0 16px;
+}
+.heat-cell{
+  position:relative;
+  border-radius:4px;
+  padding:12px 14px;
+  display:flex;flex-direction:column;gap:4px;
+  cursor:default;
+  transition:transform .15s, box-shadow .15s;
+  overflow:hidden;
+}
+.heat-cell:hover{transform:translateY(-2px);}
+.heat-cell::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(255,255,255,.07),rgba(255,255,255,0));
+  pointer-events:none;
+}
+.heat-rank{
+  font-family:var(--fd);font-size:28px;line-height:1;
+  color:rgba(255,255,255,.25);font-weight:400;
+  position:absolute;right:10px;bottom:6px;
+}
+.heat-platform{
+  font-family:var(--fu);font-size:8px;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;
+  opacity:.75;margin-bottom:2px;
+}
+.heat-title{
+  font-size:13px;font-weight:500;line-height:1.45;
+  color:rgba(255,255,255,.95);
+}
+.heat-meta{
+  font-family:var(--fu);font-size:9px;
+  opacity:.6;margin-top:2px;
+}
+.heat-bar{
+  position:absolute;bottom:0;left:0;right:0;height:3px;
+  background:rgba(255,255,255,.2);
+}
+.heat-bar-fill{
+  height:100%;background:rgba(255,255,255,.5);
+  transition:width .4s ease;
+}
+
 </style>
 </head>
 <body>
@@ -642,7 +693,7 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
   <div class="ps" id="ps-ai"><div class="ps-dot"></div><span id="ps-ai-text">AI科技</span></div>
   <div class="ps" id="ps-stocks"><div class="ps-dot"></div><span id="ps-stocks-text">股市</span></div>
   <div class="ps" id="ps-wb"><div class="ps-dot"></div><span id="ps-wb-text">微博</span></div>
-  <div class="ps" id="ps-xhs"><div class="ps-dot"></div><span id="ps-xhs-text">小红书</span></div>
+  <div class="ps" id="ps-social"><div class="ps-dot"></div><span id="ps-social-text">社交热力图</span></div>
   <div class="ps" id="ps-claude"><div class="ps-dot"></div><span id="ps-claude-text">Claude 整合</span></div>
 </div>
 
@@ -705,30 +756,32 @@ dialog::backdrop{background:rgba(0,0,0,.8);backdrop-filter:blur(4px);}
     <div id="body-ai" class="news-grid-full"></div>
   </div>
 
-  <!-- ── 05+06 微博 + 小红书 (side by side) ─────── -->
-  <div class="panel-row" style="margin-top:0">
-    <div class="panel">
-      <div class="sec-hd">
-        <div class="sec-num">05</div>
-        <div class="sec-info">
-          <div class="sec-eye" style="color:var(--wb)">🔥 Weibo Hot Search · 微博热搜榜</div>
-          <div class="sec-title">微博热搜</div>
-        </div>
-        <div class="sec-cnt" id="count-weibo">—</div>
+  <!-- ── 05 微博热搜 TOP 30 (full width) ────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
+      <div class="sec-num">05</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--wb)">🔥 Weibo Hot Search · 微博热搜榜 TOP 30</div>
+        <div class="sec-title">微博热搜</div>
       </div>
-      <div id="body-weibo" class="trend-list"></div>
+      <div class="sec-cnt" id="count-weibo">—</div>
     </div>
-    <div class="panel">
-      <div class="sec-hd">
-        <div class="sec-num">06</div>
-        <div class="sec-info">
-          <div class="sec-eye" style="color:var(--xhs)">📕 Xiaohongshu Trending · 小红书热榜</div>
-          <div class="sec-title">小红书热点</div>
-        </div>
-        <div class="sec-cnt" id="count-xhs">—</div>
+    <div class="sec-rule"></div>
+    <div id="body-weibo"></div>
+  </div>
+
+  <!-- ── 06 中国社交媒体热力图 ──────────────────── -->
+  <div class="full-section">
+    <div class="sec-hd">
+      <div class="sec-num">06</div>
+      <div class="sec-info">
+        <div class="sec-eye" style="color:var(--social)">📊 China Social Media · 抖音 · 小红书 · 热门话题</div>
+        <div class="sec-title">社交热力图</div>
       </div>
-      <div id="body-xhs" class="trend-list"></div>
+      <div class="sec-cnt" id="count-social">—</div>
     </div>
+    <div class="sec-rule"></div>
+    <div id="body-social"></div>
   </div>
 
   <!-- ── 07 股市指数 ────────────────────────────── -->
@@ -993,13 +1046,20 @@ async function wGet(path) {
 
 // ── GNews ──────────────────────────────────────────────
 async function gnewsFetch(q, lang = 'en', max = 10) {
-  const d = await wPost('/api/gnews', { q, lang, max, key: state.cfg.gnewsKey });
+  // Pass today's date so GNews only returns today's articles
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const fromDate = today.toISOString().slice(0,10) + 'T00:00:00Z';
+  const d = await wPost('/api/gnews', { q, lang, max, key: state.cfg.gnewsKey, from: fromDate });
   return normArr(d.articles);
 }
 
 // ── NewsAPI ────────────────────────────────────────────
 async function newsapiFetch(q, sources) {
-  const d = await wPost('/api/newsapi', { q, sources, key: state.cfg.newsapiKey });
+  // Pass today's date so NewsAPI only returns today's articles
+  const today = new Date();
+  const from = today.toISOString().slice(0,10); // YYYY-MM-DD
+  const d = await wPost('/api/newsapi', { q, sources, key: state.cfg.newsapiKey, from });
   return normArr(d.articles);
 }
 
@@ -1094,7 +1154,7 @@ async function loadUSNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻（均为今天 ${new Date().toLocaleDateString('zh-CN')} 的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻，过滤掉发布日期不是今天的条目。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1109,7 +1169,7 @@ async function loadCNNews() {
   ps('cn', 'loading', '中国新闻 · 混元搜索中');
   if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
   const today = new Date().toLocaleDateString('zh-CN');
-  const prompt = `今天是${today}。搜索今日中国最重要的12条新闻（不足则全部），来源优先选择新华社、人民日报、央视新闻。` +
+  const prompt = `今天是${today}。搜索今天（${today}）发生的中国最重要的12条新闻（不足则全部，只要当天新闻，不要历史旧闻），来源优先选择新华社、人民日报、央视新闻。` +
     `标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。` +
     `必须严格返回纯JSON数组，格式：[{"title":"...","summary":"...","tag":"...","source":"..."}]，不得有任何其他文字。`;
   const d = await wPost('/api/hunyuan-news', {
@@ -1152,7 +1212,7 @@ async function loadEnergyNews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻（均为今天的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1191,7 +1251,7 @@ async function loadAINews() {
     `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
   ).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻，挑选最重要的12条（不足则全部），翻译整理为中文。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻（均为今天的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1215,7 +1275,8 @@ async function loadWeibo() {
   try {
     // 直接调用 SIGNAL Worker 内置微博路由，Worker 自动多源轮询
     const data = await wPost('/api/weibo', { customUrl: state.cfg.weiboCrawler || null });
-    const items = normArr(Array.isArray(data) ? data : (data.weibo || data.items || []));
+    const raw = normArr(Array.isArray(data) ? data : (data.weibo || data.items || []));
+    const items = raw.slice(0, 30);
     ps('wb', 'ok', `微博 · ${items.length} 条`);
     return items.length ? items : null;
   } catch (e) {
@@ -1224,18 +1285,48 @@ async function loadWeibo() {
   }
 }
 
-async function loadXHS() {
-  ps('xhs', 'loading', '小红书 · 热榜抓取中');
+async function loadSocialHeatmap() {
+  // 调用 Worker 获取抖音 + 小红书热门话题，合并后做热力图
+  ps('social', 'loading', '社交热力图 · 抓取中');
+  let items = [];
+
+  // 抖音热榜
   try {
-    // 直接调用 SIGNAL Worker 内置小红书路由，Worker 自动多源轮询
-    const data = await wPost('/api/xhs', { customUrl: state.cfg.xhsCrawler || null });
-    const items = normArr(Array.isArray(data) ? data : (data.xiaohongshu || data.xhs || data.items || []));
-    ps('xhs', 'ok', `小红书 · ${items.length} 条`);
-    return items.length ? items : null;
-  } catch (e) {
-    ps('xhs', 'err', `小红书 · ${e.message.slice(0, 20)}`);
+    const d = await wPost('/api/douyin', {});
+    const arr = Array.isArray(d) ? d : (d.items || d.data || []);
+    arr.slice(0, 10).forEach((it, i) => {
+      if (it.title || it.word) items.push({
+        platform: '抖音',
+        rank: it.rank || (i + 1),
+        title: it.title || it.word || '',
+        hot: it.hot || it.heat || '',
+        url: it.url || '',
+      });
+    });
+  } catch {}
+
+  // 小红书热榜
+  try {
+    const d = await wPost('/api/xhs', { customUrl: state.cfg.xhsCrawler || null });
+    const arr = Array.isArray(d) ? d : (d.items || d.data || []);
+    arr.slice(0, 8).forEach((it, i) => {
+      if (it.title) items.push({
+        platform: '小红书',
+        rank: it.rank || (i + 1),
+        title: it.title || '',
+        hot: it.hot || it.heat || '',
+        url: it.url || '',
+        tag: it.tag || '',
+      });
+    });
+  } catch {}
+
+  if (!items.length) {
+    ps('social', 'skip', '社交热力图 · 数据不足');
     return null;
   }
+  ps('social', 'ok', `社交热力图 · ${items.length} 条`);
+  return items;
 }
 
 async function claudeIntegrate(sections) {
@@ -1267,14 +1358,14 @@ async function loadAll() {
   $('refreshBtn').textContent = '↻ 加载中';
   setStatus('管线启动中…');
 
-  ['us','cn','energy','ai','stocks','wb','xhs','claude'].forEach(id => ps(id, '', '--'));
+  ['us','cn','energy','ai','stocks','wb','social','claude'].forEach(id => ps(id, '', '--'));
   $('body-us').innerHTML     = skelCards(5);
   $('body-cn').innerHTML     = skelCards(5);
   $('body-energy').innerHTML = skelCards(5);
   $('body-ai').innerHTML     = skelCards(5);
   $('body-stocks').innerHTML = skelStocks();
   $('body-weibo').innerHTML  = skelTrend(6);
-  $('body-xhs').innerHTML    = skelTrend(6);
+  $('body-social').innerHTML = skelHeatmap();
 
   const sections    = {};
   const healthItems = [];
@@ -1286,7 +1377,7 @@ async function loadAll() {
     { key:'ai',     fn: loadAINews,     bodyId:'body-ai',     render: d => renderNews(d,'var(--ai)'),     cnt:'count-ai'     },
     { key:'stocks', fn: loadStocks,     bodyId:'body-stocks', render: d => renderStocks(d),               cnt:'count-stocks' },
     { key:'wb',     fn: loadWeibo,      bodyId:'body-weibo',  render: d => renderTrend(d,'var(--wb)'),   cnt:'count-weibo'  },
-    { key:'xhs',    fn: loadXHS,        bodyId:'body-xhs',    render: d => renderTrend(d,'var(--xhs)'),  cnt:'count-xhs'    },
+    { key:'social', fn: loadSocialHeatmap, bodyId:'body-social', render: d => renderHeatmap(d),          cnt:'count-social' },
   ];
 
   for (const ph of phases) {
@@ -1419,13 +1510,13 @@ const DEMO = {
 };
 
 async function loadDemo() {
-  ['us','cn','energy','ai','stocks','wb','xhs','claude'].forEach(id => ps(id, 'ok', `${id} · 演示`));
+  ['us','cn','energy','ai','stocks','wb','social','claude'].forEach(id => ps(id, 'ok', `${id} · 演示`));
   $('body-us').innerHTML     = renderNews(DEMO.us,    'var(--us)');
   $('body-cn').innerHTML     = renderNews(DEMO.cn,    'var(--cn)');
   $('body-energy').innerHTML = renderNews(DEMO.energy, 'var(--energy)');
   $('body-ai').innerHTML     = renderNews(DEMO.ai,     'var(--ai)');
   $('body-weibo').innerHTML  = renderTrend(DEMO.weibo,'var(--wb)');
-  $('body-xhs').innerHTML    = renderTrend(DEMO.xhs,  'var(--xhs)');
+  $('body-social').innerHTML = renderHeatmap(DEMO.social);
   $('body-stocks').innerHTML = renderStocks(DEMO.stocks);
   $('body-health').innerHTML = renderHealth(DEMO.health);
 
@@ -1434,7 +1525,7 @@ async function loadDemo() {
   $('count-energy').textContent = DEMO.energy.length;
   $('count-ai').textContent     = DEMO.ai.length;
   $('count-weibo').textContent  = DEMO.weibo.length;
-  $('count-xhs').textContent    = DEMO.xhs.length;
+  $('count-social').textContent = DEMO.social.length;
   $('count-stocks').textContent = DEMO.stocks.length;
   $('healthScoreValue').textContent = '5/7';
   $('health-pill').textContent      = '7 个源';
@@ -1485,6 +1576,46 @@ function renderTrend(items, accentVar) {
       <span class="t-badge" style="color:${accentVar};background:${accentVar}18;border:1px solid ${accentVar}33">${esc(it.tag||'热榜')}</span>
     </div>`;
   }).join('')}</div>`;
+}
+
+function renderHeatmap(items) {
+  if (!items?.length) return `<div class="empty">暂无社交热力数据</div>`;
+  // Sort by hot (descending), get max for relative sizing
+  const withVal = items.map(it => {
+    const num = parseFloat(String(it.hot || '0').replace(/[^0-9.]/g, '')) || 0;
+    return { ...it, hotVal: num };
+  });
+  const maxVal = Math.max(...withVal.map(it => it.hotVal), 1);
+
+  const PLATFORM_COLORS = {
+    '抖音':  { bg:'#1a1a2e', accent:'#ff2d55', text:'#ff2d55' },
+    '小红书':{ bg:'#1f0d12', accent:'#f72b5a', text:'#f72b5a' },
+  };
+
+  return `<div class="heatmap-grid fade-in">${withVal.map((it, i) => {
+    const c = PLATFORM_COLORS[it.platform] || { bg:'#141414', accent:'var(--social)', text:'var(--social)' };
+    // Heat intensity: top items are brighter
+    const intensity = 0.35 + (1 - i / withVal.length) * 0.55;
+    const bgColor = c.bg;
+    const pct = maxVal > 0 ? Math.round((it.hotVal / maxVal) * 100) : 50;
+    const link = it.url ? `onclick="if(it.url)window.open('${esc(it.url)}','_blank')"` : '';
+    return `<div class="heat-cell" style="background:${bgColor};opacity:${intensity + 0.1};border:1px solid ${c.accent}22;" title="${esc(it.title)}${it.hot?' · '+esc(it.hot):''}">
+      <div class="heat-platform" style="color:${c.text}">${esc(it.platform)}</div>
+      <div class="heat-title">${esc(it.title)}</div>
+      ${it.hot ? `<div class="heat-meta">${esc(it.hot)}</div>` : ''}
+      <div class="heat-rank">${it.rank || (i+1)}</div>
+      <div class="heat-bar"><div class="heat-bar-fill" style="width:${pct}%;background:${c.accent}88"></div></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function skelHeatmap() {
+  return `<div class="heatmap-grid">${Array.from({length:12},(_,i)=>`
+    <div class="heat-cell" style="background:var(--smoke);border:1px solid var(--ash);opacity:${0.4+(i%3)*0.1}">
+      <div class="sl" style="height:8px;width:35%;margin-bottom:7px"></div>
+      <div class="sl" style="height:13px;width:${60+(i*13)%30}%"></div>
+      <div class="sl" style="height:8px;width:28%;margin-top:6px"></div>
+    </div>`).join('')}</div>`;
 }
 
 function renderStocks(items) {
@@ -1779,7 +1910,7 @@ function init() {
   $('body-energy').innerHTML = skelCards(5);
   $('body-ai').innerHTML     = skelCards(5);
   $('body-weibo').innerHTML  = skelTrend(6);
-  $('body-xhs').innerHTML    = skelTrend(6);
+  $('body-social').innerHTML = skelHeatmap();
 
   if (!state.cfg.workerUrl) {
     loadDemo();
