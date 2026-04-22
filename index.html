@@ -958,6 +958,20 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, s =>
 const normArr = v => Array.isArray(v) ? v : [];
 const delay   = ms => new Promise(r => setTimeout(r, ms));
 
+function isTodayOrRecent(publishedAt) {
+  if (!publishedAt) return true; // keep if no date
+  const diff = (Date.now() - new Date(publishedAt).getTime()) / 3600000;
+  return diff <= 48;
+}
+
+function filterRecentArticles(articles) {
+  const today = new Date().toISOString().slice(0, 10);
+  // First try today-only
+  const todayOnly = articles.filter(a => (a.publishedAt || '').slice(0, 10) === today);
+  // If >= 5 today articles, use them; otherwise fall back to 48h
+  return todayOnly.length >= 5 ? todayOnly : articles.filter(a => isTodayOrRecent(a.publishedAt));
+}
+
 function extractJSONArray(txt) {
   txt = txt.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
   let start = txt.indexOf('[');
@@ -1148,13 +1162,17 @@ async function loadUSNews() {
     }
   }
 
-  ps('us', 'loading', `美国新闻 · Gemini 整合 ${articles.length} 篇`);
+  articles = filterRecentArticles(articles);
+  ps('us', 'loading', `美国新闻 · Gemini 整合 ${articles.length} 篇 (近48h)`);
   if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
-  const articleText = articles.slice(0, 15).map((a, i) =>
-    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`
-  ).join('\n\n');
+  // Inject date into each article so Gemini can verify and filter
+  const articleText = articles.slice(0, 15).map((a, i) => {
+    const pub = a.publishedAt || a.published_at || '';
+    const dateStr = pub ? pub.slice(0, 10) : 'unknown';
+    return `${i+1}. [${dateStr}] Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||'AP'}`;
+  }).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文新闻（均为今天 ${new Date().toLocaleDateString('zh-CN')} 的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻，过滤掉发布日期不是今天的条目。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治经济科技，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天日期：${new Date().toISOString().slice(0,10)}。每条原文开头已标注日期，严格丢弃日期不是今天的条目（date mismatch → skip）。若今天内容不足12条，则按时间由近到远补充最近48小时内的内容，但必须标注实际日期。只保留主要发生在美国境内的新闻（涉及美国政府、美国经济、美国社会）；欧洲、中国、中东、其他国家的新闻一律丢弃。标题20字内，只用名词动词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填一个中文分类词如政治/经济/科技，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1169,8 +1187,9 @@ async function loadCNNews() {
   ps('cn', 'loading', '中国新闻 · 混元搜索中');
   if (!state.cfg.hunyuanKey) throw new Error('请配置腾讯混元 API Key');
   const today = new Date().toLocaleDateString('zh-CN');
-  const prompt = `今天是${today}。搜索今天（${today}）发生的中国最重要的12条新闻（不足则全部，只要当天新闻，不要历史旧闻），来源优先选择新华社、人民日报、央视新闻。` +
-    `标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。` +
+  const prompt = `今天是${today}。` +
+    `只要今天（${today}）发生的新闻，如果今天还没有足够新闻则可以纳入昨天的，但必须在summary开头注明实际日期如【4月22日】。不要任何超过48小时的旧闻。来源优先选择新华社、人民日报、央视新闻。不要重复，不要境外发生的新闻，只要中国大陆、港澳台的内容。` +
+    `标题20字内，只用名词动词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。summary开头格式【月日】正文。` +
     `必须严格返回纯JSON数组，格式：[{"title":"...","summary":"...","tag":"...","source":"..."}]，不得有任何其他文字。`;
   const d = await wPost('/api/hunyuan-news', {
     prompt,
@@ -1206,13 +1225,16 @@ async function loadEnergyNews() {
     articles = await newsapiFetch('energy renewable nuclear power climate', null);
   }
 
-  ps('energy', 'loading', `能源 · Gemini 整合 ${articles.length} 篇`);
+  articles = filterRecentArticles(articles);
+  ps('energy', 'loading', `能源 · Gemini 整合 ${articles.length} 篇 (近48h)`);
   if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
-  const articleText = articles.slice(0, 15).map((a, i) =>
-    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
-  ).join('\n\n');
+  const articleText = articles.slice(0, 15).map((a, i) => {
+    const pub = a.publishedAt || a.published_at || '';
+    const dateStr = pub ? pub.slice(0, 10) : 'unknown';
+    return `${i+1}. [${dateStr}] Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`;
+  }).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文能源新闻（均为今天的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天日期：${new Date().toISOString().slice(0,10)}。每条原文开头已标注日期，严格丢弃日期不是今天的条目（date mismatch → skip）。若今天内容不足12条，则按时间由近到远补充最近48小时内的内容，但必须标注实际日期。覆盖全球范围，但地理标签要准确，写清楚是哪个国家/地区的能源动态。标题20字内，只用名词动词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"能源"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
@@ -1245,13 +1267,16 @@ async function loadAINews() {
     articles = await newsapiFetch('artificial intelligence AI technology chip', null);
   }
 
-  ps('ai', 'loading', `AI科技 · Gemini 整合 ${articles.length} 篇`);
+  articles = filterRecentArticles(articles);
+  ps('ai', 'loading', `AI科技 · Gemini 整合 ${articles.length} 篇 (近48h)`);
   if (!state.cfg.geminiKey) throw new Error('请配置 Gemini API Key');
-  const articleText = articles.slice(0, 15).map((a, i) =>
-    `${i+1}. Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`
-  ).join('\n\n');
+  const articleText = articles.slice(0, 15).map((a, i) => {
+    const pub = a.publishedAt || a.published_at || '';
+    const dateStr = pub ? pub.slice(0, 10) : 'unknown';
+    return `${i+1}. [${dateStr}] Title: ${a.title||''}\nDesc: ${a.description||''}\nSource: ${a.source?.name||a.source||''}`;
+  }).join('\n\n');
   const result = await geminiFetch(
-    `今天是${new Date().toLocaleDateString('zh-CN')}。以下英文AI科技新闻（均为今天的最新内容），挑选最重要的12条，翻译整理为中文。只要当天新闻。标题20字内，只用名词动词，不用感叹号和形容词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
+    `今天日期：${new Date().toISOString().slice(0,10)}。每条原文开头已标注日期，严格丢弃日期不是今天的条目（date mismatch → skip）。若今天内容不足12条，则按时间由近到远补充最近48小时内的内容，但必须标注实际日期。覆盖全球范围，但要标注新闻主角所在国家（美国/中国/欧洲等），并优先选取有实质性技术进展的新闻。标题20字内，只用名词动词。摘要200字，专业新闻写作风格，只陈述客观事实含关键数据机构名时间节点，不使用修饰性词语，第三人称叙述。tag字段填"AI"，source字段填原英文媒体名。\n原文：\n${articleText}`
   );
   if (!result?.length) throw new Error('Gemini 返回为空，请检查 API Key 或稍后重试');
   result.forEach((item, i) => {
