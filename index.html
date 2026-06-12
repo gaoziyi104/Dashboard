@@ -1161,55 +1161,53 @@ async function loadUSNews() {
 }
 
 async function loadCNNews() {
-  ps('cn', 'loading', '中国新闻 · Gemini 实时搜索中');
-
-  // Build today's date string with full year to prevent year ambiguity
   const now   = new Date();
-  const today = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
-
-  const NO_XX = '【严禁占位符】摘要中禁止出现XX、X.X%、X亿等占位符。原文有具体数字就用原文数字；没有的不写，改为描述事件本身。';
-  const FORMAT = '标题20字内，只用名词动词。摘要100-200字，专业新闻风格，第三人称，不用修饰语。summary必须以【月日】开头如【6月12日】。';
+  const year  = now.getFullYear();
+  const today = `${year}年${now.getMonth()+1}月${now.getDate()}日`;
+  const NO_XX = '【严禁占位符】禁止出现XX、X.X%、X亿等占位符，原文有数字就用原文数字，没有则描述事件本身。';
+  const FORMAT = '标题20字内，只用名词动词。摘要100-200字，专业新闻风格，第三人称。summary必须以【月日】开头，如【6月12日】。';
 
   const prompt =
-    `请用 Google 搜索 ${today} 中国大陆、香港、澳门、台湾发生的最重要的12条新闻。` +
-    `必须是 ${now.getFullYear()}年 的新闻，不要其他年份同一日期的历史新闻。` +
+    `请联网搜索 ${today} 中国大陆、香港、澳门、台湾发生的最重要的12条新闻。` +
+    `必须是 ${year}年 的真实新闻，不要其他年份同一日期的历史事件。` +
     `来源优先选择新华社、人民日报、央视新闻、环球时报、财新。` +
-    `只要中国境内新闻，不要境外事件。` +
+    `只要中国境内新闻，不要境外事件，不要重复。` +
     FORMAT + NO_XX +
     `tag字段填中文分类词，source字段填媒体名。`;
 
-  // Primary: Gemini Search (real-time, most accurate)
-  if (state.cfg.geminiKey) {
+  // Primary: Hunyuan（中文理解最佳 + 联网搜索）
+  if (state.cfg.hunyuanKey) {
+    ps('cn', 'loading', '中国新闻 · 混元联网搜索中');
     try {
-      const result = await geminiSearch(prompt);
+      const d = await wPost('/api/hunyuan-news', {
+        prompt: prompt + '\n严格返回纯JSON数组：[{"title":"...","summary":"...","tag":"...","source":"..."}]，不得有任何其他文字。',
+        key:      state.cfg.hunyuanKey,
+        model:    state.cfg.hunyuanModel    || 'hunyuan-turbos-latest',
+        endpoint: state.cfg.hunyuanEndpoint || '',
+      });
+      const result = Array.isArray(d.items) ? d.items : null;
       if (result?.length) {
         ps('cn', 'ok', `中国新闻 · ${result.length} 条`);
         return result;
       }
     } catch (e) {
-      console.warn('Gemini CN failed, trying Hunyuan:', e.message);
+      console.warn('Hunyuan CN failed, trying Gemini:', e.message);
     }
   }
 
-  // Fallback: Hunyuan (if Gemini unavailable or failed)
-  if (state.cfg.hunyuanKey) {
-    ps('cn', 'loading', '中国新闻 · 混元搜索中（备用）');
-    const hunyuanPrompt = prompt +
-      `\n严格返回纯JSON数组：[{"title":"...","summary":"...","tag":"...","source":"..."}]，不得有任何其他文字。`;
-    const d = await wPost('/api/hunyuan-news', {
-      prompt:   hunyuanPrompt,
-      key:      state.cfg.hunyuanKey,
-      model:    state.cfg.hunyuanModel    || 'hunyuan-turbos-latest',
-      endpoint: state.cfg.hunyuanEndpoint || '',
-    });
-    const result = Array.isArray(d.items) ? d.items : null;
-    if (result?.length) {
-      ps('cn', 'ok', `中国新闻 · ${result.length} 条（混元）`);
-      return result;
-    }
+  // Fallback: Gemini Search
+  if (state.cfg.geminiKey) {
+    ps('cn', 'loading', '中国新闻 · Gemini 搜索中（备用）');
+    try {
+      const result = await geminiSearch(prompt);
+      if (result?.length) {
+        ps('cn', 'ok', `中国新闻 · ${result.length} 条（Gemini）`);
+        return result;
+      }
+    } catch (e) { /* fall through */ }
   }
 
-  throw new Error('请配置 Gemini 或混元 API Key');
+  throw new Error('请配置混元或 Gemini API Key');
 }
 
 async function loadEnergyNews() {
